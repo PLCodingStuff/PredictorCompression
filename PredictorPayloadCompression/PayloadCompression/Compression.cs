@@ -11,8 +11,6 @@ public class Compression
 
         hash = ((hash << 5) + hash ^ substring[0])%65536;
         hash = ((hash << 5) + hash ^ substring[1])%65536;
-        // hash = (hash << 5) + hash ^ substring[2];
-        // hash = (hash << 5) + hash ^ substring[3];
         
         return hash;
     }
@@ -45,7 +43,7 @@ public class Compression
     public byte[] PayloadCompression(string S){
         ulong hash;
         const int k = 2;
-        BitArray bitArray = new BitArray(S.Length, false);
+        BitArray bitArray = new(S.Length, false);
         var leftovers = new List<char>();
         char[] guessTable = new char[65536];
 
@@ -72,51 +70,17 @@ public class Compression
             }
         }
 
+
         var byteArray = ConvertToByteArray(bitArray);
-        // Console.WriteLine($"Leftovers: {[.. leftovers]}");
-        // Console.Write("ByteArray: ");
-        // foreach(byte b in byteArray){
-        //     Console.Write($"{b} ");
-        // }
-        // Console.WriteLine();
-
-    /*        
-        byte[] result = new byte[byteArray.Length + leftovers.Count];
-
-        foreach(char c in leftovers){
-            result.Append((byte) c);
-        }
-        foreach(byte b in byteArray){
-            Console.WriteLine(b);
-            result.Append(b);
-        }
-        // var stream = new MemoryStream(leftovers.Count + (bitArray.Length + 7) / 8);
-        // foreach(char c in leftovers){
-            // stream.WriteByte((byte) c);
-        // }
-        // foreach(byte b in byteArray){
-            // stream.WriteByte(b);
-        // }
-
-        // return stream;
-
-        foreach(byte b in result){
-            Console.Write(b);
-        }
-        Console.WriteLine();
-    */
         List<byte> result = [];
+
+        result.Add((byte)leftovers.Count);
         foreach(char c in leftovers){
             result.Add((byte) c);
         }
         foreach(byte b in byteArray){
             result.Add(b);
         }
-
-        // foreach(byte b in result){
-        //     Console.Write(b);
-        // }
-        // Console.WriteLine();
 
         return [.. result];
     }
