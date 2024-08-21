@@ -16,46 +16,53 @@ public class Compression
     }
 
     private static byte[] ConvertToByteArray(BitArray bitArray)
+    {
+        int bytes = (bitArray.Count + 7) / 8;
+        byte[] result = new byte[bytes];
+        int bitIndex;
+        int byteIndex;
+
+        for (int i = 0; i < bitArray.Count; i++)
         {
-            int bytes = (bitArray.Length + 7) / 8;
-            byte[] arr2 = new byte[bytes];
-            int bitIndex = 0;
-            int byteIndex = 0;
+            bitIndex = i % 8;
+            byteIndex = i >> 3;
 
-            for (int i = 0; i < bitArray.Length; i++)
-            {
-                if (bitArray[i])
-                {
-                    arr2[byteIndex] |= (byte)(1 << bitIndex);
-                }
-
-                bitIndex++;
-                if (bitIndex == 8)
-                {
-                    bitIndex = 0;
-                    byteIndex++;
-                }
-            }
-
-            return arr2;
+            if (bitArray[i])
+                result[byteIndex] |= (byte)(1 << bitIndex);
         }
 
-    public byte[] PayloadCompression(string S){
+        return result;
+    }
+
+    private static byte[] MergeBitArrayLeftovers(List<char> leftovers, BitArray bitArray) {
+        var byteArray = ConvertToByteArray(bitArray);
+        List<byte> result = [];
+
+        result.Add((byte)leftovers.Count);
+        foreach(char c in leftovers){
+            result.Add((byte) c);
+        }
+        foreach(byte b in byteArray){
+            result.Add(b);
+        }
+
+        return [.. result];
+    }
+
+    public byte[] PayloadCompression(string S)
+    {
         ulong hash;
         const int k = 2;
         BitArray bitArray = new(S.Length, false);
-        var leftovers = new List<char>();
+        List<char> leftovers;
         char[] guessTable = new char[65536];
 
         if(S==""){
             throw new ArgumentException("Empty string passed to compressor");
         }
 
-        // Init leftovers
-        leftovers.Add(S[0]);
-        leftovers.Add(S[1]);
-
-        // Init guess table with spaces
+        leftovers = [S[0], S[1]];
+        
         for(int c = 0; c < 65536; c++){
              guessTable[c] = ' ';
         }
@@ -70,18 +77,6 @@ public class Compression
             }
         }
 
-
-        var byteArray = ConvertToByteArray(bitArray);
-        List<byte> result = [];
-
-        result.Add((byte)leftovers.Count);
-        foreach(char c in leftovers){
-            result.Add((byte) c);
-        }
-        foreach(byte b in byteArray){
-            result.Add(b);
-        }
-
-        return [.. result];
+        return MergeBitArrayLeftovers(leftovers, bitArray);;
     }
 }
