@@ -23,8 +23,10 @@ class Client(NetworkComponent):
                     self._socket.settimeout(10)
                     self._socket.connect((self._peer_host, self._peer_port))
                     print(f"Connected to {self._peer_host}:{self._peer_port}")
+                    break
                 except ConnectionRefusedError:
                     retry+=1
+
             if retry >= self._retries:
                 raise ConnectionAbortedError
         except TimeoutError:
@@ -41,9 +43,6 @@ class Client(NetworkComponent):
             self._socket.sendall(compressed_msg)
         except ConnectionError:
             raise ConnectionError
-        except sockerror as e:
-            print(f"Error sending message: {e}")
-            self._conn.update_state()
         except ValueError as e:
             print(str(e))
 
