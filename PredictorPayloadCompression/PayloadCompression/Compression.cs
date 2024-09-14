@@ -77,6 +77,6 @@ public class Compression
             }
         }
 
-        return MergeBitArrayLeftovers(leftovers, bitArray);;
+        return MergeBitArrayLeftovers(leftovers, bitArray);
     }
 }

@@ -5,6 +5,7 @@ namespace PayloadDecompression;
 public class Decompression
 {
     const int k = 2;
+
     private static ulong HashFunction(string substring)
     {
         ulong hash = 5381;
@@ -15,7 +16,8 @@ public class Decompression
         return hash;
     }
 
-    private static void InitializeArrays(List<char> leftovers, StringBuilder decompressedText, char[] guessTable, byte[] compressedData) {
+    private static void InitializeArrays(List<char> leftovers, StringBuilder decompressedText, char[] guessTable, byte[] compressedData) 
+    {
         for (int i = 0; i < compressedData.Length; i++)
         {
             leftovers.Add(Convert.ToChar(compressedData[i]));
@@ -36,11 +38,11 @@ public class Decompression
     {
         int leftoversLength = compressedData[0];
         List<char> leftovers = [];
+        char[] guessTable = new char[65536];
+        StringBuilder decompressedText = new();
         int flagBitsStartIndex = 1 + leftoversLength;
         int flagBitsLength = compressedData.Length - flagBitsStartIndex;
         byte[] flagBitsArray = new byte[flagBitsLength];
-        char[] guessTable = new char[65536];
-        StringBuilder decompressedText = new();
         BitArray flagBits;
 
         Array.Copy(compressedData, flagBitsStartIndex, flagBitsArray, 0, flagBitsLength);
@@ -51,7 +53,6 @@ public class Decompression
         int leftoversIndex = k;
         for (int i = k; i < flagBits.Count; i++)
         {
-            // Get hash 
             string substring = decompressedText.ToString(i - k, k);
             ulong hash = HashFunction(substring);
 
