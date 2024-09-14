@@ -5,6 +5,8 @@
 *.cs
 *.sln
 
+*.pyc
+
 # User-specific files
 *.suo
 *.user

@@ -1,4 +1,5 @@
 import threading
+from json import load
 from sys import argv
 from Network import Client, Server, Connection
 
@@ -14,7 +15,12 @@ class Node:
         server_thread = threading.Thread(target=self._server.start)
         self._connection.update_state()
         server_thread.start()
-        self._client.start()
+        try:
+            self._client.start()
+        except ConnectionAbortedError as e:
+            self._connection.update_state()
+            exit(1)
+            
 
     def __disconnect(self):
         self._connection.update_state()
@@ -24,30 +30,42 @@ class Node:
         self._client.handler()
         self.__disconnect()
 
-def get_addresses()->tuple[str, int, str, int]:
+def get_addresses(filename: str)->tuple[str, int, str, int]:
     address: str = "127.0.0.1"
     peer_address: str = "127.0.0.1"
 
-    choice = input("Would you like to use the default localhost address for the host (y/n)?")
-    if choice.lower() == "n":
-        address = input("Enter the address you'd like to use")
+    if not filename.endswith('.json'):
+        raise FileNotFoundError("Invalid suffix.")
 
-    port:int = int(input("Enter the port for the host you would like to use: "))
-    
-    choice = input("Does the peer also use the default localhost address(y/n)?")
-    if choice.lower() == "n":
-        peer_address = input("Enter the peer's address ")
-
-    peer_port:int = int(input("Enter the port of the peer: "))
-    print()
+    with open(filename) as js:
+        addressess = load(js)
+        if "address" in addressess:
+            address = addressess["address"]
+        if "peer_address" in addressess:
+            peer_address = addressess["peer_address"]
+        if "port" not in addressess:
+            raise ValueError("Port is not provided in JSON file.")
+        if "peer_port" not in addressess:
+            raise ValueError("Peer port is not provided in JSON file.")
+        
+        port = addressess["port"]
+        peer_port = addressess["peer_port"]
 
     return address, port, peer_address, peer_port
 
 def main():
-    host, port, peer_host, peer_port = get_addresses()
+    try:
+        if len(argv) != 2:
+            raise ValueError("Invalid number of command line arguments")
+        host, port, peer_host, peer_port = get_addresses(argv[1])
 
-    node = Node(host, port, peer_host, peer_port)
-    node.start_chat()
+        node = Node(host, port, peer_host, peer_port)
+        node.start_chat()
+    except ValueError as e:
+        print(f"Error while loading: {e}")
+    except FileNotFoundError as e:
+        print(f"Error while loading: {e}")
+    print("Terminating Process")
 
 if __name__ == "__main__":
     main()

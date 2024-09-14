@@ -5,8 +5,8 @@ from time import sleep
 
 class Client(NetworkComponent):
     def __init__(self, peer_host: str, peer_port: int, 
-                       conn: Connection, retries: int = 10,
-                       delay: float = 5.0) -> None:
+                       conn: Connection, retries: int = 7,
+                       delay: float = 3.0) -> None:
         self._compressor: Compression = Compression()
         self._peer_host: str = peer_host
         self._peer_port: int = peer_port
@@ -25,12 +25,13 @@ class Client(NetworkComponent):
                     print(f"Connected to {self._peer_host}:{self._peer_port}")
                 except ConnectionRefusedError:
                     retry+=1
+            if retry >= self._retries:
+                raise ConnectionAbortedError
         except TimeoutError:
             print(f"Connection timed out.")
-        except sockerror as e:
-            print(f"Error while starting client: {e}")
-            self._conn.update_state()
-            return
+        except ConnectionAbortedError:
+            print(f"Peer server's not running. Terminating process.")
+            raise ConnectionAbortedError
 
     def __send_message(self, msg: str):
         try:
@@ -61,6 +62,12 @@ class Client(NetworkComponent):
 
     def close(self):
         if self._socket is not None:
-            self._socket.shutdown(SHUT_RDWR)
+            try:
+                self._socket.shutdown(SHUT_RDWR)
+            except sockerror as e:
+                # This error is due to lack of connection, so 
+                # `shutdown()` cannot be called without one.
+                if e.winerror != 10057:
+                    print(f"Client Error {e}")
             self._socket.close()
             self._socket = None

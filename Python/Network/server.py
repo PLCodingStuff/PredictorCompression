@@ -18,8 +18,9 @@ class Server(NetworkComponent):
             self.conn, addr = self._socket.accept()
             print(f"{str(addr)} connected")
             self.handler()
-        except Exception as e:
-            print(f"Error in server: {e}")
+        except sockerror as e:
+            if e.winerror != 10038:
+                print(f"Error in server: {e}")
             self._conn.update_state()
 
     def __decompress_data(self, data: bytearray) -> str:
@@ -51,7 +52,13 @@ class Server(NetworkComponent):
 
     def close(self) -> None:
         if self.conn:
-            self.conn.shutdown(SHUT_RDWR)
+            try:
+                self.conn.shutdown(SHUT_RDWR)
+            except sockerror as e:
+                # This error is due to lack of connection, so 
+                # `shutdown()` cannot be called without one.
+                if e.winerror != 10038:
+                    print(f"Error Closing Server Connection socket: {e}")
             self.conn.close()
             self.conn = None
         if self._socket:
