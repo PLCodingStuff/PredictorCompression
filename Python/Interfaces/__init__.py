@@ -1,3 +1,3 @@
-from .Observer import Observer, Observable
+from .observer import Observer, Observable
 
 __all__ = ["Observer", "Observable"]

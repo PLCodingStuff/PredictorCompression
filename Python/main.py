@@ -12,9 +12,9 @@ class Node:
 
     def __connect(self):
         server_thread = threading.Thread(target=self._server.start)
+        self._connection.update_state()
         server_thread.start()
         self._client.start()
-        self._connection.update_state()
 
     def __disconnect(self):
         self._connection.update_state()
@@ -24,14 +24,30 @@ class Node:
         self._client.handler()
         self.__disconnect()
 
+def get_addresses()->tuple[str, int, str, int]:
+    address: str = "127.0.0.1"
+    peer_address: str = "127.0.0.1"
+
+    choice = input("Would you like to use the default localhost address for the host (y/n)?")
+    if choice.lower() == "n":
+        address = input("Enter the address you'd like to use")
+
+    port:int = int(input("Enter the port for the host you would like to use: "))
+    
+    choice = input("Does the peer also use the default localhost address(y/n)?")
+    if choice.lower() == "n":
+        peer_address = input("Enter the peer's address ")
+
+    peer_port:int = int(input("Enter the port of the peer: "))
+    print()
+
+    return address, port, peer_address, peer_port
+
+def main():
+    host, port, peer_host, peer_port = get_addresses()
+
+    node = Node(host, port, peer_host, peer_port)
+    node.start_chat()
 
 if __name__ == "__main__":
-    # Example: Replace with actual IPs and ports
-    my_host = "127.0.0.1"  # This peer's host
-    my_port = int(argv[1])  # This peer's port
-
-    peer_host = "127.0.0.1"  # Peer host (can be different IP)
-    peer_port = int(argv[2])  # Peer port
-
-    node = Node(my_host, my_port, peer_host, peer_port)
-    node.start_chat()
+    main()
