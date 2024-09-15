@@ -50,7 +50,7 @@ Python 3.11 was used for the implementation.
 2. **Install dependencies:**
    Ensure you have Python 3.x installed. Install the required packages using pip:
    ```bash
-   pip install bitarray
+   pip install -r requirements.txt
    ```
 
 ## Usage
