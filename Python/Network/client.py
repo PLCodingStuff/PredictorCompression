@@ -4,9 +4,39 @@ from PayloadCompression import Compression
 from time import sleep
 
 class Client(NetworkComponent):
+    """
+    Client class that connects to a peer server, sends compressed messages, 
+    and handles the communication. It uses a retry mechanism for establishing 
+    the connection and manages the message-sending process.
+
+    Attributes:
+        _compressor (Compression): Instance of the Compression class for message compression.
+        _peer_host (str): The host address of the peer server.
+        _peer_port (int): The port number of the peer server.
+        _retries (int): The maximum number of connection retry attempts.
+        _delay (float): The delay between each connection retry.
+    
+    Methods:
+        start() -> None: Starts the client and attempts to connect to the peer server.
+        __send_message(msg: str) -> None: Compresses and sends a message to the server.
+        handler() -> None: Handles user input and manages message sending in a loop.
+        close() -> None: Closes the client connection and shuts down the socket.
+    """
     def __init__(self, peer_host: str, peer_port: int, 
                        conn: Connection, retries: int = 7,
                        delay: float = 3.0) -> None:
+        """
+        Initialize the Client object with peer server details and connection parameters.
+
+        Args:
+            peer_host (str): The peer server's host address.
+            peer_port (int): The peer server's port number.
+            conn (Connection): The shared connection object.
+            retries (int, optional): The number of connection retry attempts. Default is 7.
+            delay (float, optional): The delay between connection attempts in seconds. Default is 3.0.
+        
+        The Client object uses the Connection object to monitor and manage the connection state.
+        """
         self._compressor: Compression = Compression()
         self._peer_host: str = peer_host
         self._peer_port: int = peer_port
@@ -15,6 +45,18 @@ class Client(NetworkComponent):
         super().__init__(None, None, conn)
 
     def start(self) -> None:
+        """
+        Attempt to connect to the peer server with retries.
+
+        This method tries to establish a connection to the peer server. If the connection 
+        is refused or fails, it retries the connection based on the `retries` and `delay` 
+        settings. If the maximum number of retries is exceeded or a timeout occurs, 
+        appropriate exceptions are raised.
+
+        Raises:
+            ConnectionAbortedError: If the connection cannot be established after all retries.
+            TimeoutError: If the connection attempt times out.
+        """
         retry: int = 0
         try:
             while retry < self._retries:
@@ -36,6 +78,20 @@ class Client(NetworkComponent):
             raise ConnectionAbortedError
 
     def __send_message(self, msg: str):
+        """
+        Compress and send a message to the peer server.
+
+        Args:
+            msg (str): The message to be sent to the server.
+
+        Raises:
+            ConnectionError: If the connection is not active.
+            ValueError: If there is an issue with compressing the message.
+        
+        This method compresses the message using the Compression class before sending 
+        it over the socket. If the connection is not active or the message cannot be 
+        compressed, appropriate exceptions are raised.
+        """
         try:
             if not self._conn.state:
                 raise ConnectionError
@@ -47,6 +103,13 @@ class Client(NetworkComponent):
             print(str(e))
 
     def handler(self):
+        """
+        Handle user input and send messages to the peer server.
+
+        This method continuously reads user input and sends messages to the peer server. 
+        The user can type 'exit' to terminate the communication and close the connection.
+        If the connection is lost, the loop will break, and the client will terminate.
+        """
         while True:
             message = input("")
             try:
@@ -60,6 +123,12 @@ class Client(NetworkComponent):
                 break
 
     def close(self):
+        """
+        Close the client socket and terminate the connection.
+
+        This method attempts to gracefully shut down the client socket. If there is no 
+        active connection, it catches the socket error and closes the socket.
+        """
         if self._socket is not None:
             try:
                 self._socket.shutdown(SHUT_RDWR)
