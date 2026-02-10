@@ -45,7 +45,7 @@ class Connection(Observable):
         Raises:
             ValueError: If the observer is not found in the list.
         """
-        return self._observers.remove(observer)
+        self._observers.remove(observer)
     
     def _notify(self) -> None:
         """
