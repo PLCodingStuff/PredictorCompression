@@ -12,12 +12,9 @@ def test_compression():
 
     assert compressed_msg == test_byte_msg
 
-@pytest.mark.parametrize("short_msg,expected",
-                         [
-                             ("Hi", b"Hi"),
-                             ("A", b"A")
-                         ])
-def test_less_than_k(short_msg,expected):
+
+@pytest.mark.parametrize("short_msg,expected", [("Hi", "Hi"), ("A", "A")])
+def test_less_than_k(short_msg, expected):
     compressor: Compression = Compression()
 
     test_byte_message: bytearray = bytearray(expected, encoding="ASCII")
