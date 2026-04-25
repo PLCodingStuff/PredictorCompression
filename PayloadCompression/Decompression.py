@@ -37,7 +37,8 @@ class Decompression:
         return hash_val % 65536
 
 
-    def __init_arrays(self, compressed_data: bytearray)->tuple[list[str], list[str], bitarray, list[str]]:
+    @staticmethod
+    def __init_arrays(compressed_data: bytearray)->tuple[list[str], list[str], bitarray, list[str]]:
         """
         Initialize the leftovers, decompressed text, flag bits, and guess table.
 
@@ -57,8 +58,10 @@ class Decompression:
         leftovers_length: int = compressed_data[0]+1
         leftovers: list[str] = [chr(b) for b in compressed_data[1:leftovers_length]]
 
-        get_length: int = lambda length: Decompression.k if length > Decompression.k else length
-        decompressed_text: list[str] = [leftovers[i] for i in range(get_length(leftovers_length))]
+        try:
+            decompressed_text: list[str] = [leftovers[i] for i in range(Decompression.k)]
+        except IndexError:
+            decompressed_text: list[str] = [leftovers[0]]
 
         flag_bits = bitarray()
         flag_bits.frombytes(compressed_data[leftovers_length:])
