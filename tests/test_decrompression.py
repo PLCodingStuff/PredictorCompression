@@ -13,15 +13,19 @@ def test_decompression():
 
     assert text_message == test_msg
 
-def test_less_than_k():
+@pytest.mark.parametrize("short_msg,expected", 
+                         [
+                             (b"Hi", "Hi"),
+                             (b"A", "A")
+                         ])
+def test_less_than_k(short_msg, expected):
     decompressor: Decompression = Decompression()
 
-    test_msg = "Hi"
-    byte_msg: bytearray = bytearray(b"Hi")
+    byte_msg: bytearray = bytearray(short_msg)
 
     text_msg: str = decompressor.payload_decompression(byte_msg)
 
-    assert text_msg == test_msg
+    assert text_msg == expected
 
 def test_empty():
     decompressor: Decompression = Decompression()
