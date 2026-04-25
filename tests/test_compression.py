@@ -5,7 +5,7 @@ def test_compression():
     compressor: Compression = Compression()
 
     test_message: str = "Hello World"
-    test_byte_msg: bytearray = bytearray(b"\x0AHelloWorld\x04\x00", encoding="ASCII")
+    test_byte_msg: bytearray = bytearray(b"\x0AHelloWorld\x04\x00")
     
     compressed_msg: bytearray = compressor.payload_compression(test_message)
 
