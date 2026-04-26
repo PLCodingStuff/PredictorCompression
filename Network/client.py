@@ -72,9 +72,9 @@ class Client(NetworkComponent):
             if retry >= self._retries:
                 raise ConnectionAbortedError
         except TimeoutError:
-            print(f"Connection timed out.")
+            print("Connection timed out.")
         except ConnectionAbortedError:
-            print(f"Peer server's not running. Terminating process.")
+            print("Peer server's not running. Terminating process.")
             raise ConnectionAbortedError
 
     def __send_message(self, msg: str):
