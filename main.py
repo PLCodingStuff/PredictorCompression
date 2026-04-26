@@ -52,7 +52,7 @@ class Node:
         server_thread.start()
         try:
             self._client.start()
-        except ConnectionAbortedError as e:
+        except ConnectionAbortedError:
             self._connection.update_state()
             exit(1)
             
