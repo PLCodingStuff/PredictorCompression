@@ -1,4 +1,4 @@
-from socket import socket, SOL_SOCKET, SO_REUSEADDR, error as sockerror, SHUT_RDWR
+from socket import SOL_SOCKET, SO_REUSEADDR, SO_RCVTIMEO, error as sockerror, SHUT_RDWR
 from .network_component import NetworkComponent, Connection
 from PayloadCompression import Decompression
 
@@ -9,7 +9,7 @@ class Server(NetworkComponent):
     to maintain the state of the connection.
 
     Attributes:
-        conn (socket): The socket used for communication with the connected client.
+        conn (Connection): The connection object.
         _decompressor (Decompression): Instance of the Decompression class for decompressing messages.
 
     Methods:
@@ -29,10 +29,10 @@ class Server(NetworkComponent):
 
         The server socket is set up to reuse the same address to avoid binding issues during restart.
         """
-        self.conn: socket = None
+        self.conn: Connection = None
         self._decompressor: Decompression = Decompression()
         super().__init__(host, port, conn)
-        self._socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        self._socket.setsockopt(SOL_SOCKET, SO_REUSEADDR | SO_RCVTIMEO, 1)
 
     def start(self) -> None:
         """
@@ -50,13 +50,25 @@ class Server(NetworkComponent):
             self._socket.listen(1)
             print(f"Server listening on {self._host}:{self._port}")
 
+        except sockerror as e:
+            if e.winerror != 10038:
+                print(f"Error in server: {e}")
+            self._socket.close()
+            self._socket = None
+            self._conn.update_state()
+            return
+
+        try:
             self.conn, addr = self._socket.accept()
             print(f"{str(addr)} connected")
             self.handler()
         except sockerror as e:
             if e.winerror != 10038:
-                print(f"Error in server: {e}")
+                print(f"Error in server{e}")
+            self._socket.close()
+            self._socket = None
             self._conn.update_state()
+            return
 
     def __decompress_data(self, data: bytearray) -> str:
         """
@@ -93,6 +105,8 @@ class Server(NetworkComponent):
                 compressed_data: bytearray = self.conn.recv(1024)
 
                 message:str = self.__decompress_data(compressed_data)
+                if message == "":
+                    continue
                 print(f"Received message: {message}")
 
                 if message == 'exit':
