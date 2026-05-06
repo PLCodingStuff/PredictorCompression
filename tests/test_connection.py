@@ -1,5 +1,4 @@
 from Network import Connection, Client
-import pytest
 
 def test_initial_state():
     conn: Connection = Connection()
