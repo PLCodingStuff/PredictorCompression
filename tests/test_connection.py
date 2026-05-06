@@ -1,4 +1,5 @@
 from Network import Connection, Client
+import pytest
 
 def test_initial_state():
     conn: Connection = Connection()
@@ -44,3 +45,24 @@ def test_attach_duplicates():
     conn.attach(client)
 
     assert len(conn._observers) == 1
+
+
+def test_detach():
+    conn: Connection = Connection()
+
+    client: Client = Client("",0, None)
+
+    conn.attach(client)
+    conn.detach(client)
+
+    assert not conn._observers
+
+def test_detach_observer_not_in_list():
+    conn: Connection = Connection()
+
+    client: Client = Client("",0, None)
+    
+    with pytest.raises(ValueError):
+        conn.detach(client)
+
+    assert not conn._observers
