@@ -102,7 +102,7 @@ class Server(NetworkComponent):
         """
         try:
             while True:
-                compressed_data: bytearray = self.conn.recv(1024)
+                compressed_data: bytearray = self._socket.recv(1024)
 
                 message:str = self.__decompress_data(compressed_data)
                 if message == "":
