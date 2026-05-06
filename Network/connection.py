@@ -18,8 +18,9 @@ class Connection(Observable):
         state -> bool: Property to get the current state of the connection.
         update_state() -> None: Toggles the connection state and notifies observers.
     """
-    _state: bool = False
-    _observers: list[Observer] = []
+    def __init__(self):
+        self._state: bool = False
+        self._observers: list[Observer] = []
 
     def attach(self, observer: Observer) -> None:
         """
