@@ -31,7 +31,8 @@ class Connection(Observable):
         
         This method adds the observer to the internal list of observers.
         """
-        self._observers.append(observer)
+        if observer not in self._observers:
+            self._observers.append(observer)
 
     def detach(self, observer: Observer) -> None:
         """
