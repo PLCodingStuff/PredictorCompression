@@ -1,7 +1,6 @@
 from socket import (
     SOL_SOCKET,
     SO_REUSEADDR,
-    SO_RCVTIMEO,
     error as sockerror,
     SHUT_RDWR,
     socket,
