@@ -65,15 +65,15 @@ class Client(NetworkComponent):
         try:
             while retry < self._retries:
                 try:
-                    sleep(self._delay)
                     self._socket.settimeout(10)
                     self._socket.connect((self._peer_host, self._peer_port))
                     print(f"Connected to {self._peer_host}:{self._peer_port}")
                     break
                 except ConnectionRefusedError:
                     retry += 1
+                    sleep(self._delay)
 
-            if retry >= self._retries:
+            if retry == self._retries:
                 raise ConnectionAbortedError
         except TimeoutError:
             print("Connection timed out.")
@@ -134,7 +134,7 @@ class Client(NetworkComponent):
             except sockerror as e:
                 # This error is due to lack of connection, so
                 # `shutdown()` cannot be called without one.
-                if e.winerror != 10057:
+                if e.errno != 10057:
                     print(f"Client Error {e}")
             self._socket.close()
             self._socket = None

@@ -52,7 +52,7 @@ class NetworkComponent(Observer):
         If the connection's state becomes False (i.e., disconnected), 
         this method triggers the `close` method to shut down the network component.
         """
-        if (not data._state):
+        if (not data.state):
             self.close()
 
     @abstractmethod

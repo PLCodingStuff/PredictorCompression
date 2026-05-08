@@ -42,7 +42,7 @@ class Server(NetworkComponent):
         self.conn_s: socket = None
         self._decompressor: Decompression = Decompression()
         super().__init__(host, port, conn)
-        self._socket.setsockopt(SOL_SOCKET, SO_REUSEADDR | SO_RCVTIMEO, 1)
+        self._socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         self._socket.settimeout(timeout)
 
     def start(self) -> None:
@@ -60,7 +60,7 @@ class Server(NetworkComponent):
             print(f"Server listening on {self._host}:{self._port}")
 
         except sockerror as e:
-            if e.winerror != 10038:
+            if e.errno != 10038:
                 print(f"Error in server: {e}")
             self._socket.close()
             self._socket = None
@@ -71,7 +71,7 @@ class Server(NetworkComponent):
             self.conn_s, addr = self._socket.accept()
             print(f"{str(addr)} connected")
         except sockerror as e:
-            if e.winerror != 10038:
+            if e.errno != 10038:
                 print(f"Error in server {e}")
             self._socket.close()
             self._socket = None
@@ -114,7 +114,7 @@ class Server(NetworkComponent):
         try:
             while True:
                 try:
-                    compressed_data: bytearray = self._socket.recv(1024)
+                    compressed_data: bytearray = self.conn_s.recv(1024)
                 except TimeoutError:
                     continue
 
@@ -146,7 +146,7 @@ class Server(NetworkComponent):
             except sockerror as e:
                 # This error is due to lack of connection, so
                 # `shutdown()` cannot be called without one.
-                if e.winerror != 10038:
+                if e.errno != 10038:
                     print(f"Error Closing Server Connection socket: {e}")
             self._conn.update_state()
             self.conn_s.close()
