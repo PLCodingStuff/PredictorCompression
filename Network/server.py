@@ -1,7 +1,6 @@
 from socket import (
     SOL_SOCKET,
     SO_REUSEADDR,
-    error as sockerror,
     SHUT_RDWR,
     socket,
 )
@@ -58,24 +57,19 @@ class Server(NetworkComponent):
             self._socket.listen(1)
             print(f"Server listening on {self._host}:{self._port}")
 
-        except sockerror as e:
-            if e.errno != 10038:
-                print(f"Error in server: {e}")
+        except OSError as e:
             self._socket.close()
             self._socket = None
-            self._conn.update_state()
-            return
+            raise e
 
         try:
             self.conn_s, addr = self._socket.accept()
             print(f"{str(addr)} connected")
-        except sockerror as e:
-            if e.errno != 10038:
-                print(f"Error in server {e}")
+        except OSError as e:
             self._socket.close()
             self._socket = None
             self._conn.update_state()
-            return
+            raise e
 
     def start_and_handle(self):
         self.start()
@@ -129,7 +123,7 @@ class Server(NetworkComponent):
                     self._conn.update_state()
                     print("Press Enter to exit")
                     break
-        except sockerror as e:
+        except OSError as e:
             print(str(e))
             self.close()
 
@@ -142,7 +136,7 @@ class Server(NetworkComponent):
         if self.conn_s:
             try:
                 self.conn_s.shutdown(SHUT_RDWR)
-            except sockerror as e:
+            except OSError as e:
                 # This error is due to lack of connection, so
                 # `shutdown()` cannot be called without one.
                 if e.errno != 10038:
