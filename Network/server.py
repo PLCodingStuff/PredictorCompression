@@ -92,10 +92,10 @@ class Server(NetworkComponent):
             self._socket = None
             self._conn.update_state()
             error = e.args[0]
-            if error == "No connection established...\nTerminating...":
+            if "No connection established" in str(e):
                 print(error)
                 return
-            raise OSError(error)
+            raise 
 
     def start_and_handle(self):
         self.start()
