@@ -80,11 +80,12 @@ class Server(NetworkComponent):
                 try:
                     self.conn_s, addr = self._socket.accept()
                     print(f"{str(addr)} connected")
+                    break
                 except timeout:
-                    if r != 2:
+                    if r != self._retries - 1:
                         print("No connection. Retrying...")
                     continue
-            if addr == None:
+            if addr is None:
                 raise OSError("No connection established...\nTerminating...")
         except OSError as e:
             self._socket.close()

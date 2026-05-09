@@ -1,12 +1,14 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from Network import Server, Connection
 from socket import socket, AF_INET, SOCK_STREAM, timeout
 import errno
 from os import strerror
 
+
 def _error_msg(error: int) -> str:
     return f"OSError {error}: {strerror(error)}"
+
 
 class TestServer(unittest.TestCase):
     @patch("socket.socket.bind", side_effect=OSError(errno.EACCES))
@@ -18,7 +20,6 @@ class TestServer(unittest.TestCase):
             server.start()
         msg: str = _error_msg(errno.EACCES)
         self.assertEqual(str(context.exception), msg)
-
 
     @patch("socket.socket.accept")
     def test_accept_successful(self, mock_accept):
@@ -33,9 +34,17 @@ class TestServer(unittest.TestCase):
         self.assertEqual(server.conn_s, conn_s)
         server.close()
 
-    @patch("socket.socket.accept",  side_effect=timeout)
+    @patch("socket.socket.accept", side_effect=timeout)
     def test_accept_timeout(self, mock_accept):
-        ...
+        conn = MagicMock()
+        retries: int = 3
+        server: Server = Server("127.0.0.1", 6000, conn, timeout=1, retries=retries)
+
+        server.start()
+
+        self.assertEqual(mock_accept.call_count, retries)
+        self.assertIsNone(server._socket)
+        conn.update_state.assert_called_once()
 
     @patch("socket.socket.accept", side_effect=OSError(errno.EPERM))
     def test_accept_fail(self, mock_object):
@@ -45,8 +54,8 @@ class TestServer(unittest.TestCase):
 
             server.start()
 
-        msg: str = _error_msg(errno.EPERM)
-        self.assertEqual(str(context.exception), msg)
+        self.assertEqual(str(context.exception), str(errno.EPERM))
+
 
 if __name__ == "__main__":
     unittest.main()
