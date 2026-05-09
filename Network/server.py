@@ -6,7 +6,11 @@ from socket import (
 )
 from .network_component import NetworkComponent, Connection
 from PayloadCompression import Decompression
+import errno
+from os import strerror
 
+def _error_msg(error: int) -> str:
+    return f"OSError {error}: {strerror(error)}"
 
 class Server(NetworkComponent):
     """
@@ -60,7 +64,14 @@ class Server(NetworkComponent):
         except OSError as e:
             self._socket.close()
             self._socket = None
-            raise e
+            error: int = e.args[0]
+            msg: str = _error_msg(error)
+            if error == errno.EADDRINUSE:
+                raise ConnectionError(msg)
+            elif error == errno.EACCES:
+                raise PermissionError(msg)
+            else: 
+                raise OSError(msg)
 
         try:
             self.conn_s, addr = self._socket.accept()
@@ -69,7 +80,18 @@ class Server(NetworkComponent):
             self._socket.close()
             self._socket = None
             self._conn.update_state()
-            raise e
+            error: int = e.args[0]
+            msg: str = _error_msg(error)
+            if error == errno.EAGAIN:
+                raise TimeoutError(msg)
+            elif error == errno.EWOULDBLOCK:
+                raise TimeoutError(msg)
+            elif error == errno.ECONNABORTED:
+                raise ConnectionAbortedError(msg)
+            elif error == errno.ETIMEDOUT:
+                raise TimeoutError(msg)
+            else:
+                raise OSError(msg)
 
     def start_and_handle(self):
         self.start()
