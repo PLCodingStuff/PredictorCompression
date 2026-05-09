@@ -1,16 +1,13 @@
-from socket import (
-    SOL_SOCKET,
-    SO_REUSEADDR,
-    SHUT_RDWR,
-    socket,
-)
+from socket import SOL_SOCKET, SO_REUSEADDR, SHUT_RDWR, socket, timeout
 from .network_component import NetworkComponent, Connection
 from PayloadCompression import Decompression
 import errno
 from os import strerror
 
+
 def _error_msg(error: int) -> str:
     return f"OSError {error}: {strerror(error)}"
+
 
 class Server(NetworkComponent):
     """
@@ -28,7 +25,12 @@ class Server(NetworkComponent):
     """
 
     def __init__(
-        self, host: str, port: int, conn: Connection, timeout: float = 5.0
+        self,
+        host: str,
+        port: int,
+        conn: Connection,
+        timeout: float = 5.0,
+        retries: int = 3,
     ) -> None:
         """
         Initialize the Server object with a host address, port number, and connection object.
@@ -46,6 +48,7 @@ class Server(NetworkComponent):
         super().__init__(host, port, conn)
         self._socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         self._socket.settimeout(timeout)
+        self._retries = retries
 
     def start(self) -> None:
         """
@@ -66,32 +69,32 @@ class Server(NetworkComponent):
             self._socket = None
             error: int = e.args[0]
             msg: str = _error_msg(error)
-            if error == errno.EADDRINUSE:
-                raise ConnectionError(msg)
-            elif error == errno.EACCES:
+            if error == errno.EACCES:
                 raise PermissionError(msg)
-            else: 
+            else:
                 raise OSError(msg)
 
         try:
-            self.conn_s, addr = self._socket.accept()
-            print(f"{str(addr)} connected")
+            addr = None
+            for r in range(self._retries):
+                try:
+                    self.conn_s, addr = self._socket.accept()
+                    print(f"{str(addr)} connected")
+                except timeout:
+                    if r != 2:
+                        print("No connection. Retrying...")
+                    continue
+            if addr == None:
+                raise OSError("No connection established...\nTerminating...")
         except OSError as e:
             self._socket.close()
             self._socket = None
             self._conn.update_state()
-            error: int = e.args[0]
-            msg: str = _error_msg(error)
-            if error == errno.EAGAIN:
-                raise TimeoutError(msg)
-            elif error == errno.EWOULDBLOCK:
-                raise TimeoutError(msg)
-            elif error == errno.ECONNABORTED:
-                raise ConnectionAbortedError(msg)
-            elif error == errno.ETIMEDOUT:
-                raise TimeoutError(msg)
-            else:
-                raise OSError(msg)
+            error = e.args[0]
+            if error == "No connection established...\nTerminating...":
+                print(error)
+                return
+            raise OSError(error)
 
     def start_and_handle(self):
         self.start()
