@@ -4,11 +4,6 @@ from PayloadCompression import Decompression
 import errno
 from os import strerror
 
-
-def _error_msg(error: int) -> str:
-    return f"OSError {error}: {strerror(error)}"
-
-
 class Server(NetworkComponent):
     """
     Server class that listens for incoming client connections, receives compressed messages, decompresses them, and manages communication. The server uses a shared connection object to maintain the state of the connection.
@@ -28,7 +23,7 @@ class Server(NetworkComponent):
         self,
         host: str,
         port: int,
-        conn: Connection,
+        conn: Connection = None,
         timeout: float = 5.0,
         retries: int = 3,
     ) -> None:
@@ -45,6 +40,8 @@ class Server(NetworkComponent):
         """
         self.conn_s: socket = None
         self._decompressor: Decompression = Decompression()
+        if not conn:
+            conn: Connection = Connection()
         super().__init__(host, port, conn)
         self._socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         self._socket.settimeout(timeout)
@@ -54,13 +51,13 @@ class Server(NetworkComponent):
         """
         Start the server, bind to the specified address, and listen for incoming connections.
 
-        This method binds the server socket to a port, listens for incoming client connections, and accepts the connection.
+        This method binds the server socket to a port, listens for an incoming client connection, and accepts the connection.
 
         Raises:
-            sockerror: If there is an error during binding or connection.
+            OSError: If there is an error during binding or connection.
         """
         try:
-            self._socket.bind(("0.0.0.0", self._port))
+            self._socket.bind((self._host, self._port))
             self._socket.listen(1)
             print(f"Server listening on {self._host}:{self._port}")
 
@@ -68,11 +65,10 @@ class Server(NetworkComponent):
             self._socket.close()
             self._socket = None
             error: int = e.args[0]
-            msg: str = _error_msg(error)
             if error == errno.EACCES:
-                raise PermissionError(msg)
+                raise PermissionError(f"{errno.EACCES}: {strerror(errno.EACCES)}")
             else:
-                raise OSError(msg)
+                raise OSError(error)
 
         try:
             addr = None
@@ -80,6 +76,7 @@ class Server(NetworkComponent):
                 try:
                     self.conn_s, addr = self._socket.accept()
                     print(f"{str(addr)} connected")
+                    self._conn.update_state()
                     break
                 except timeout:
                     if r != self._retries - 1:
@@ -90,7 +87,6 @@ class Server(NetworkComponent):
         except OSError as e:
             self._socket.close()
             self._socket = None
-            self._conn.update_state()
             if "No connection established" in str(e):
                 print(str(e))
                 return
