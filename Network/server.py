@@ -1,8 +1,9 @@
 from socket import SOL_SOCKET, SO_REUSEADDR, SHUT_RDWR, socket, timeout
+from  ipaddress import ip_address
 from .network_component import NetworkComponent, Connection
 from PayloadCompression import Decompression
 import errno
-from os import strerror
+
 
 class Server(NetworkComponent):
     """
@@ -42,10 +43,25 @@ class Server(NetworkComponent):
         self._decompressor: Decompression = Decompression()
         if not conn:
             conn: Connection = Connection()
+
+        try:
+            ip_address(host)
+        except ValueError:
+            raise ValueError("Invalid host name")
+    
+        if port <= 0:
+            raise ValueError("Port value out of range")
+        
+        if timeout < 0.0:
+            raise ValueError("Timeout value out of range")
+
+        if retries < 0:
+            raise ValueError("Retries value out of range")
+
+        self._retries = retries
         super().__init__(host, port, conn)
         self._socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         self._socket.settimeout(timeout)
-        self._retries = retries
 
     def start(self) -> None:
         """
@@ -66,7 +82,7 @@ class Server(NetworkComponent):
             self._socket = None
             error: int = e.args[0]
             if error == errno.EACCES:
-                raise PermissionError(f"{errno.EACCES}: {strerror(errno.EACCES)}")
+                raise PermissionError(f"Port {self._port} is occupied")
             else:
                 raise OSError(error)
 
@@ -162,9 +178,9 @@ class Server(NetworkComponent):
                 # `shutdown()` cannot be called without one.
                 if e.errno != 10038:
                     print(f"Error Closing Server Connection socket: {e}")
-            self._conn.update_state()
             self.conn_s.close()
             self.conn_s = None
+        self._conn.update_state()
         if self._socket:
             self._socket.close()
             self._socket = None
