@@ -1,10 +1,11 @@
-from src.network_components.network_component import NetworkComponent, Connection
+from src.network_components.connection import Connection
+from src.interfaces.observer import Observer
 from socket import error as sockerror, SHUT_RDWR
 from src.payload_compression.compression import Compression
 from time import sleep
 
 
-class Client(NetworkComponent):
+class Client(Observer):
     """
     Client class that connects to a peer server, sends compressed messages,
     and handles the communication. It uses a retry mechanism for establishing
@@ -138,3 +139,6 @@ class Client(NetworkComponent):
                     print(f"Client Error {e}")
             self._socket.close()
             self._socket = None
+
+    def update(self):
+        pass

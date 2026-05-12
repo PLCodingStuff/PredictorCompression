@@ -1,12 +1,12 @@
 from socket import SOL_SOCKET, SO_REUSEADDR, SHUT_RDWR, socket, timeout
 from  ipaddress import ip_address
-from src.network_components.network_component import NetworkComponent
+from interfaces.observer import Observer
 from src.network_components.connection import Connection
 from src.payload_compression.decompression import Decompression
 import errno
 
 
-class Server(NetworkComponent):
+class Server(Observer):
     """
     Server class that listens for incoming client connections, receives compressed messages, decompresses them, and manages communication. The server uses a shared connection object to maintain the state of the connection.
 
@@ -185,3 +185,6 @@ class Server(NetworkComponent):
         if self._socket:
             self._socket.close()
             self._socket = None
+
+    def update(self):
+        pass
