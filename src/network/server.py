@@ -1,7 +1,8 @@
 from socket import SOL_SOCKET, SO_REUSEADDR, SHUT_RDWR, socket, timeout
 from  ipaddress import ip_address
-from .network_component import NetworkComponent, Connection
-from PayloadCompression import Decompression
+from src.network_components.network_component import NetworkComponent
+from src.network_components.connection import Connection
+from src.payload_compression.decompression import Decompression
 import errno
 
 

@@ -1,7 +1,9 @@
 import threading
 from json import load
 from sys import argv
-from Network import Client, Server, Connection
+from src.network.client import Client
+from src.network.server import Server
+from src.network_components.connection import Connection
 
 
 class Node:

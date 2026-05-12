@@ -1,5 +1,5 @@
-from Network import Connection
-from Interfaces import Observer
+from src.network_components.connection import Connection
+from src.interfaces.observer import Observer
 import pytest
 
 TOGGLES = 1000

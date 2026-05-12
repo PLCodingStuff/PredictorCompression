@@ -1,4 +1,4 @@
-from Interfaces import Observable, Observer
+from src.interfaces.observer import Observable, Observer
 
 class Connection(Observable):
     """

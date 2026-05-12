@@ -1,5 +1,5 @@
 import pytest
-from PayloadCompression import Compression
+from src.payload_compression.compression import Compression
 
 
 def test_compression():

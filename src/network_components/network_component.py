@@ -1,8 +1,8 @@
 from abc import abstractmethod
 from socket import socket, AF_INET, SOCK_STREAM
 
-from Interfaces import Observer
-from .connection import Connection
+from src.interfaces.observer import Observer
+from src.network_components.connection import Connection
 
 class NetworkComponent(Observer):
     """

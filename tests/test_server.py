@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from Network import Server, Connection
+from src.network.server import Server
+from src.network_components.connection import Connection
 from socket import socket, AF_INET, SOCK_STREAM, timeout, SOL_SOCKET, SO_REUSEADDR
 import errno
 import pytest

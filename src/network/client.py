@@ -1,6 +1,6 @@
-from .network_component import NetworkComponent, Connection
+from src.network_components.network_component import NetworkComponent, Connection
 from socket import error as sockerror, SHUT_RDWR
-from PayloadCompression import Compression
+from src.payload_compression.compression import Compression
 from time import sleep
 
 
