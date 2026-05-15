@@ -1,6 +1,14 @@
-from socket import SOL_SOCKET, SO_REUSEADDR, SHUT_RDWR, socket, timeout
-from  ipaddress import ip_address
-from interfaces.observer import Observer
+from socket import (
+    socket,
+    timeout,
+    SOL_SOCKET,
+    SO_REUSEADDR,
+    SHUT_RDWR,
+    AF_INET,
+    SOCK_STREAM,
+)
+from ipaddress import ip_address
+from src.interfaces.observer import Observer
 from src.network_components.connection import Connection
 from src.payload_compression.decompression import Decompression
 import errno
@@ -49,10 +57,10 @@ class Server(Observer):
             ip_address(host)
         except ValueError:
             raise ValueError("Invalid host name")
-    
+
         if port <= 0:
             raise ValueError("Port value out of range")
-        
+
         if timeout < 0.0:
             raise ValueError("Timeout value out of range")
 
@@ -60,7 +68,10 @@ class Server(Observer):
             raise ValueError("Retries value out of range")
 
         self._retries = retries
-        super().__init__(host, port, conn)
+        self._host = host
+        self._port = port
+        self._conn = conn
+        self._socket = socket(AF_INET, SOCK_STREAM)
         self._socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         self._socket.settimeout(timeout)
 
@@ -186,5 +197,6 @@ class Server(Observer):
             self._socket.close()
             self._socket = None
 
-    def update(self):
-        pass
+    def update(self, data: Connection):
+        if not data.state:
+            self.close()

@@ -50,7 +50,7 @@ class Client(Observer):
         self._peer_port: int = peer_port
         self._retries: int = retries
         self._delay: float = delay
-        super().__init__(None, None, conn)
+        self._conn = conn
 
     def start(self) -> None:
         """
@@ -140,5 +140,6 @@ class Client(Observer):
             self._socket.close()
             self._socket = None
 
-    def update(self):
-        pass
+    def update(self, data: Connection):
+        if not data.state:
+            self.close()
