@@ -138,6 +138,12 @@ def main():
 if __name__ == "__main__":
     # main()
     conn: Connection = Connection()
-    server: Server = Server("127.0.0.1", 6000, conn)
+    server: Server = Server("127.0.0.1", 600, conn)
+
+    from src.payload_compression.decompression import Decompression
+    decompressor: Decompression = Decompression()
 
     server.start()
+    
+    server.handler(decompressor=decompressor)
+        
