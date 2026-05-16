@@ -20,7 +20,6 @@ class Client(Observer):
 
     Methods:
         start() -> None: Starts the client and attempts to connect to the peer server.
-        __send_message(msg: str) -> None: Compresses and sends a message to the server.
         handler() -> None: Handles user input and manages message sending in a loop.
         close() -> None: Closes the client connection and shuts down the socket.
     """

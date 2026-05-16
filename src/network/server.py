@@ -24,7 +24,6 @@ class Server(Observer):
 
     Methods:
         start() -> None: Starts the server, listens for incoming connections, and handles communication.
-        __decompress_data(data: bytearray) -> str: Decompresses incoming byte data into a string.
         handler() -> None: Manages message reception and decompression in a loop.
         close() -> None: Closes the server connection and terminates the socket.
     """
