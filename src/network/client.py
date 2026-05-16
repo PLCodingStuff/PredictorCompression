@@ -45,7 +45,6 @@ class Client(Observer):
 
         The Client object uses the Connection object to monitor and manage the connection state.
         """
-        self._compressor: Compression = Compression()
         self._peer_host: str = peer_host
         self._peer_port: int = peer_port
         self._retries: int = retries
@@ -82,30 +81,8 @@ class Client(Observer):
             print("Peer server's not running. Terminating process.")
             raise ConnectionAbortedError
 
-    def __send_message(self, msg: str):
-        """
-        Compress and send a message to the peer server.
 
-        Args:
-            msg (str): The message to be sent to the server.
-
-        Raises:
-            ConnectionError: If the connection is not active.
-            ValueError: If there is an issue with compressing the message.
-
-        This method compresses the message using the Compression class before sending it over the socket. If the connection is not active or the message cannot be compressed, appropriate exceptions are raised.
-        """
-        try:
-            if not self._conn.state:
-                raise ConnectionError
-            compressed_msg: bytearray = self._compressor.payload_compression(msg)
-            self._socket.sendall(compressed_msg)
-        except ConnectionError:
-            raise ConnectionError
-        except ValueError as e:
-            print(str(e))
-
-    def handler(self):
+    def handler(self, compressor: Compression):
         """
         Handle user input and send messages to the peer server.
 
@@ -114,13 +91,22 @@ class Client(Observer):
         while True:
             message = input("")
             try:
+                compressed_msg: bytearray = compressor.payload_compression(message)
+                
+                if not self._conn.state:
+                    raise ConnectionError
+                
+                self._socket.sendall(compressed_msg)
+
                 if message.lower() == "exit":
                     print("Exiting chat...")
-                    self.__send_message("exit")  # Send exit message to peer
-                    self._conn.update_state()
                     break
-                self.__send_message(message)
+
             except ConnectionError:
+                print("Error: Connection Timed Out")
+                break
+            except ValueError as e:
+                print(str(e))
                 break
 
     def close(self):
