@@ -122,22 +122,18 @@ class Server(Observer):
 
         This method continuously receives compressed data from the client, decompresses the data, and displays the messages. If the client sends an 'exit' message, the connection is terminated, and the handler exits.
         """
-        try:
-            while True:
-                try:
-                    compressed_data: bytearray = self.conn_s.recv(1024)
-                except TimeoutError:
-                    continue
+        while True:
+            try:
+                compressed_data: bytearray = self.conn_s.recv(1024)
 
                 if not compressed_data:
                     self._conn.update_state()
+                    self.conn_s.close()
+                    self.conn_s = None
                     print("Peer has disconnected.")
                     return
-    
-                try:
-                    message: str = decompressor.payload_decompression(compressed_data)
-                except ValueError:
-                    continue
+
+                message: str = decompressor.payload_decompression(compressed_data)
 
                 print(f"Received message: {message}")
 
@@ -146,9 +142,12 @@ class Server(Observer):
                     self._conn.update_state()
                     print("Press Enter to exit")
                     break
-        except OSError as e:
-            print(str(e))
-            self.close()
+            except (timeout, ValueError):
+                continue
+            except OSError as e:
+                print(str(e))
+                self.close()
+                break
 
     def close(self) -> None:
         """
@@ -160,10 +159,7 @@ class Server(Observer):
             try:
                 self.conn_s.shutdown(SHUT_RDWR)
             except OSError as e:
-                # This error is due to lack of connection, so
-                # `shutdown()` cannot be called without one.
-                if e.errno != 10038:
-                    print(f"Error Closing Server Connection socket: {e}")
+                print(f"Error Shutting Down Server Connection socket: {str(e)}")
             self.conn_s.close()
             self.conn_s = None
         self._conn.update_state()
