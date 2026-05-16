@@ -49,7 +49,6 @@ class Server(Observer):
         The server socket is set up to reuse the same address to avoid binding issues during restart.
         """
         self.conn_s: socket = None
-        self._decompressor: Decompression = Decompression()
         if not conn:
             conn: Connection = Connection()
 
@@ -124,30 +123,7 @@ class Server(Observer):
         self.start()
         self.handler()
 
-    def __decompress_data(self, data: bytearray) -> str:
-        """
-        Decompress the incoming byte data into a readable string.
-
-        Args:
-            data (bytearray): The compressed data received from the client.
-
-        Returns:
-            str: The decompressed message or None if the peer has disconnected.
-
-        This method decompresses the byte data using the Decompression class. If the data is empty (indicating the client has disconnected), it updates the connection state and returns None.
-        """
-        if not data:
-            self._conn.update_state()
-            print("Peer has disconnected.")
-            return None
-        try:
-            decompressed_message: str = self._decompressor.payload_decompression(data)
-        except ValueError as e:
-            raise ValueError(str(e))
-
-        return decompressed_message
-
-    def handler(self) -> None:
+    def handler(self, decompressor: Decompression) -> None:
         """
         Handle incoming messages from the client, decompress them, and display the messages.
 
@@ -160,8 +136,13 @@ class Server(Observer):
                 except TimeoutError:
                     continue
 
+                if not compressed_data:
+                    self._conn.update_state()
+                    print("Peer has disconnected.")
+                    return
+    
                 try:
-                    message: str = self.__decompress_data(compressed_data)
+                    message: str = decompressor.payload_decompression(compressed_data)
                 except ValueError:
                     continue
 
