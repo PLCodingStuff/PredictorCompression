@@ -49,7 +49,7 @@ class Server(Observer):
         """
         self.conn_s: socket = None
         if not conn:
-            conn: Connection = Connection()
+            raise ValueError("Invalid connection")
 
         try:
             ip_address(host)
@@ -81,22 +81,13 @@ class Server(Observer):
 
         Raises:
             OSError: If there is an error during binding or connection.
+            PermissionError: If the port of the socket is occupied.
         """
         try:
             self._socket.bind((self._host, self._port))
             self._socket.listen(1)
             print(f"Server listening on {self._host}:{self._port}")
 
-        except OSError as e:
-            self._socket.close()
-            self._socket = None
-            error: int = e.args[0]
-            if error == errno.EACCES:
-                raise PermissionError(f"Port {self._port} is occupied")
-            else:
-                raise OSError(error)
-
-        try:
             addr = None
             for r in range(self._retries):
                 try:
@@ -110,9 +101,12 @@ class Server(Observer):
                     continue
             if addr is None:
                 raise OSError("No connection established...\nTerminating...")
+
         except OSError as e:
             self._socket.close()
             self._socket = None
+            if e.args[0] == errno.EACCES:
+                raise PermissionError(f"Port {self._port} is occupied")
             if "No connection established" in str(e):
                 print(str(e))
                 return
