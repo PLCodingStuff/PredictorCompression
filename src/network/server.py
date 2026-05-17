@@ -12,6 +12,11 @@ from src.interfaces.observer import Observer
 from src.network_components.connection import Connection
 import errno
 
+class ServerTerminatingError(OSError):
+    """Raised when the server fails to establish a connection after all retries."""
+    def __init__(self, retries: int):
+        self.retries = retries
+        super().__init__(f"No connection established after {retries} retries. Terminating...")
 
 class Server(Observer):
     def __init__(
@@ -61,12 +66,13 @@ class Server(Observer):
             self._conn.update_state()
             return self
         except OSError as e:
-            self.__exit__(None, None, None)
-            if e == errno.EACCES:
+            self._close_server_socket()
+            if e.errno == errno.EACCES:
                 raise PermissionError(f"Port {self._port} is occupied")
-            if "Terminating" in str(e):
-                return
+            if isinstance(e, ServerTerminatingError):
+                raise
             raise
+
 
     def __exit__(self, exc_type, exc, tb) -> bool:
         self._close_conn_socket()
@@ -101,7 +107,7 @@ class Server(Observer):
                 if r != self._retries - 1:
                     print("No connection. Retrying...")
 
-        raise OSError("No connection established...\nTerminating...")
+        raise ServerTerminatingError(self._retries)
         
 
     def handler(self) -> bytearray:
