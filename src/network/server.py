@@ -12,11 +12,16 @@ from src.interfaces.observer import Observer
 from src.network_components.connection import Connection
 import errno
 
+
 class ServerTerminatingError(OSError):
     """Raised when the server fails to establish a connection after all retries."""
+
     def __init__(self, retries: int):
         self.retries = retries
-        super().__init__(f"No connection established after {retries} retries. Terminating...")
+        super().__init__(
+            f"No connection established after {retries} retries. Terminating..."
+        )
+
 
 class Server(Observer):
     def __init__(
@@ -27,7 +32,7 @@ class Server(Observer):
         sock: socket,
         timeout: float = 5.0,
         retries: int = 3,
-        buffer_size: int = 1024
+        buffer_size: int = 1024,
     ) -> None:
         if not conn:
             raise ValueError("Invalid connection")
@@ -58,7 +63,7 @@ class Server(Observer):
         # self._socket.settimeout(timeout)
 
     def __enter__(self) -> "Server":
-        try: 
+        try:
             self._bind_and_listen()
             print(f"Server listening on {self._host}:{self._port}")
             addr = self._accept()
@@ -73,12 +78,11 @@ class Server(Observer):
                 raise
             raise
 
-
     def __exit__(self, exc_type, exc, tb) -> bool:
         self._close_conn_socket()
         self._close_server_socket()
         return False
-    
+
     def _close_conn_socket(self) -> None:
         if self._conn_s:
             try:
@@ -108,7 +112,6 @@ class Server(Observer):
                     print("No connection. Retrying...")
 
         raise ServerTerminatingError(self._retries)
-        
 
     def handler(self) -> bytearray:
         try:
