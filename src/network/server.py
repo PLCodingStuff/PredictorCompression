@@ -58,6 +58,7 @@ class Server(Observer):
         self._buffer_size = buffer_size
         self._conn_s: socket | None = None
         self._socket: socket = sock
+        self._should_close = False
         # self._socket = socket(AF_INET, SOCK_STREAM)
         # self._socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         # self._socket.settimeout(timeout)
@@ -120,6 +121,7 @@ class Server(Observer):
             message: bytearray = self._conn_s.recv(self._buffer_size)
 
             if not message:
+                self._conn.update_state()
                 raise ConnectionResetError("Peer disconnected gracefully.")
 
             return message
@@ -131,7 +133,10 @@ class Server(Observer):
             print(f"Socket error: {e}")
             raise
 
+    @property
+    def should_close(self) -> bool:
+        return self._should_close
+
     def update(self, data: Connection) -> None:
         if not data.state:
-            self._close_conn_socket()
-            self._close_server_socket()
+            self._should_close = True
