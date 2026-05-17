@@ -35,7 +35,10 @@ class Server(Observer):
         buffer_size: int = 1024,
     ) -> None:
         if not conn:
-            raise ValueError("Invalid connection")
+            raise ValueError("No connection status provided")
+
+        if not sock:
+            raise ValueError("No socket provided")
 
         try:
             ip_address(host)

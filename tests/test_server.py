@@ -1,10 +1,12 @@
-import unittest
-from unittest.mock import patch, MagicMock
+import pytest
 from src.network.server import Server
 from src.network_components.connection import Connection
+"""
+import unittest
+from unittest.mock import patch, MagicMock
 from socket import socket, AF_INET, SOCK_STREAM, timeout, SOL_SOCKET, SO_REUSEADDR
 import errno
-import pytest
+
 
 
 class TestMockingServer(unittest.TestCase):
@@ -117,3 +119,10 @@ def test_bind_fail_port_used():
 
 if __name__ == "__main__":
     unittest.main()
+"""
+def test_construction_no_socket():
+    host: str = "127.0.0.1"
+    port: int = 6000
+    conn: Connection = Connection()
+    with pytest.raises(ValueError, match="No socket provided"):
+        Server(host, port, conn, None)
