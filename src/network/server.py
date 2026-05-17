@@ -66,16 +66,11 @@ class Server(Observer):
         try:
             self._bind_and_listen()
             print(f"Server listening on {self._host}:{self._port}")
-            addr = self._accept()
-            print(f"{addr} connected")
-            self._conn.update_state()
             return self
         except OSError as e:
             self._close_server_socket()
             if e.errno == errno.EACCES:
                 raise PermissionError(f"Port {self._port} is occupied")
-            if isinstance(e, ServerTerminatingError):
-                raise
             raise
 
     def __exit__(self, exc_type, exc, tb) -> bool:
@@ -91,7 +86,6 @@ class Server(Observer):
                 pass
             self._conn_s.close()
             self._conn_s = None
-            self._conn.update_state()
 
     def _close_server_socket(self) -> None:
         if self._socket:
@@ -113,7 +107,15 @@ class Server(Observer):
 
         raise ServerTerminatingError(self._retries)
 
-    def handler(self) -> bytearray:
+    def accept(self):
+        try:
+            addr: str = self._accept()
+            print(f"Client address {addr} connected successfully")
+            self._conn.update_state()
+        except ServerTerminatingError:
+            raise
+
+    def get_message(self) -> bytearray:
         try:
             message: bytearray = self._conn_s.recv(self._buffer_size)
 
