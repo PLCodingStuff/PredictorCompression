@@ -1,8 +1,8 @@
 from socket import (
     socket,
     timeout,
-    # SOL_SOCKET,
-    # SO_REUSEADDR,
+    SOL_SOCKET,
+    SO_REUSEADDR,
     SHUT_RDWR,
     # AF_INET,
     # SOCK_STREAM,
@@ -35,15 +35,11 @@ class ServerSocketManager(Observer):
         self,
         host: str,
         port: int,
-        conn: Connection,
         sock: socket,
         timeout: float = 5.0,
         retries: int = 3,
         buffer_size: int = 1024,
     ) -> None:
-        if not conn:
-            raise ValueError("No connection status provided")
-
         if not sock:
             raise ValueError("No socket provided")
 
@@ -64,14 +60,13 @@ class ServerSocketManager(Observer):
         self._retries = retries
         self._host = host
         self._port = port
-        self._conn = conn
         self._buffer_size = buffer_size
         self._conn_s: socket | None = None
         self._socket: socket = sock
         self._should_close = False
         # self._socket = socket(AF_INET, SOCK_STREAM)
-        # self._socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-        # self._socket.settimeout(timeout)
+        self._socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        self._socket.settimeout(timeout)
 
     def __enter__(self) -> "ServerSocketManager":
         try:
@@ -107,39 +102,25 @@ class ServerSocketManager(Observer):
         self._socket.bind((self._host, self._port))
         self._socket.listen(1)
 
-    def _accept(self) -> str:
+    def accept(self) -> str:
         for r in range(self._retries):
             try:
                 self._conn_s, addr = self._socket.accept()
                 return str(addr)
             except timeout:
-                if r != self._retries - 1:
-                    print("No connection. Retrying...")
+                # if r != self._retries - 1:
+                #     print("No connection. Retrying...")
+                ...
 
         raise ServerTerminatingError(self._retries)
 
-    def accept(self):
-        try:
-            addr: str = self._accept()
-            print(f"Client address {addr} connected successfully")
-        except ServerTerminatingError:
-            raise
-
     def get_message(self) -> bytearray:
-        try:
-            message: bytearray = self._conn_s.recv(self._buffer_size)
+        message: bytearray = self._conn_s.recv(self._buffer_size)
 
-            if not message:
-                raise ConnectionResetError("Peer disconnected gracefully.")
+        if not message:
+            raise ConnectionResetError("Peer disconnected gracefully.")
 
-            return message
-
-        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError) as e:
-            print(f"Connection lost: {str(e)}")
-            raise
-        except OSError as e:
-            print(f"Socket error: {str(e)}")
-            raise
+        return message
 
     @property
     def should_close(self) -> bool:
@@ -149,22 +130,24 @@ class ServerSocketManager(Observer):
         if not data.state:
             self._should_close = True
 
-class ServerManager():
+
+class ServerManager:
     def __init__(self, server_sock_man: ServerSocketManager, conn: Connection) -> None:
         self._server_sock_man: ServerSocketManager = server_sock_man
         self._conn: Connection = conn
 
     def accept(self) -> None:
-        self._server_sock_man.accept()
+        addr: str = self._server_sock_man.accept()
+        print(f"Client {addr} successfully connected")
         self._conn.update_state()
 
     def get_message(self) -> bytearray:
         try:
-            msg: bytearray =  self._server_sock_man.get_message()
+            msg: bytearray = self._server_sock_man.get_message()
             return msg
         except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
             self._conn.update_state()
-            return bytearray("")
+            return bytearray()
         except OSError as e:
             if e.errno in CONNECTION_LOST_ERRORS:
                 self._conn.update_state()
