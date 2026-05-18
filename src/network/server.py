@@ -54,8 +54,8 @@ class ServerConfig:
     host: str
     port: int
     timeout: float = 5.0
+    retries: int = 3
     buffer_size: int = 1024
-    retries: int = 5
 
     def __post_init__(self):
         try:
@@ -63,7 +63,7 @@ class ServerConfig:
         except ValueError:
             raise ValueError("Invalid host name")
 
-        if self.port <= 0 or self.port > 65536:
+        if self.port <= 0 or self.port > 65535:
             raise ValueError("Port value out of range")
 
         if self.timeout < 0.0:
@@ -71,6 +71,9 @@ class ServerConfig:
 
         if self.retries < 0:
             raise ValueError("Retries value out of range")
+        
+        if self.buffer_size <= 0:
+            raise ValueError("Invalid Buffer Size")
 
 
 class ServerSocketManager:
@@ -86,7 +89,7 @@ class ServerSocketManager:
 
     def __enter__(self) -> "ServerSocketManager":
         try:
-            self._sock: socket = self._socket_factory(self._config.timeout)
+            self._sock = self._socket_factory(self._config.timeout)
 
             self._bind_and_listen()
             return self
@@ -133,7 +136,7 @@ class ServerSocketManager:
             message: bytearray = self._conn_s.recv(self._config.buffer_size)
 
             if not message:
-                raise ConnectionResetError("Peer disconnected gracefully.")
+                raise ConnectionLostError("Peer disconnected gracefully.")
 
             return message
         except OSError as e:
@@ -166,7 +169,6 @@ class ServerManager(Observer):
                 try:
                     msg = server.get_message()
                     msg
-                    # handle msg
+                    # TODO: handle msg
                 except ConnectionLostError:
                     self._conn.update_state()
-                    
