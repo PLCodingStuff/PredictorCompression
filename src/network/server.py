@@ -12,6 +12,13 @@ from src.interfaces.observer import Observer
 from src.network_components.connection import Connection
 import errno
 
+CONNECTION_LOST_ERRORS = {
+    errno.ECONNRESET,
+    errno.ECONNABORTED,
+    errno.EPIPE,
+    errno.ETIMEDOUT,
+}
+
 
 class ServerTerminatingError(OSError):
     """Raised when the server fails to establish a connection after all retries."""
@@ -23,7 +30,7 @@ class ServerTerminatingError(OSError):
         )
 
 
-class Server(Observer):
+class ServerSocketManager(Observer):
     def __init__(
         self,
         host: str,
@@ -66,7 +73,7 @@ class Server(Observer):
         # self._socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         # self._socket.settimeout(timeout)
 
-    def __enter__(self) -> "Server":
+    def __enter__(self) -> "ServerSocketManager":
         try:
             self._bind_and_listen()
             print(f"Server listening on {self._host}:{self._port}")
@@ -115,7 +122,6 @@ class Server(Observer):
         try:
             addr: str = self._accept()
             print(f"Client address {addr} connected successfully")
-            self._conn.update_state()
         except ServerTerminatingError:
             raise
 
@@ -124,16 +130,15 @@ class Server(Observer):
             message: bytearray = self._conn_s.recv(self._buffer_size)
 
             if not message:
-                self._conn.update_state()
                 raise ConnectionResetError("Peer disconnected gracefully.")
 
             return message
 
         except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError) as e:
-            print(f"Connection lost: {e}")
+            print(f"Connection lost: {str(e)}")
             raise
         except OSError as e:
-            print(f"Socket error: {e}")
+            print(f"Socket error: {str(e)}")
             raise
 
     @property
@@ -143,3 +148,25 @@ class Server(Observer):
     def update(self, data: Connection) -> None:
         if not data.state:
             self._should_close = True
+
+class ServerManager():
+    def __init__(self, server_sock_man: ServerSocketManager, conn: Connection) -> None:
+        self._server_sock_man: ServerSocketManager = server_sock_man
+        self._conn: Connection = conn
+
+    def accept(self) -> None:
+        self._server_sock_man.accept()
+        self._conn.update_state()
+
+    def get_message(self) -> bytearray:
+        try:
+            msg: bytearray =  self._server_sock_man.get_message()
+            return msg
+        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+            self._conn.update_state()
+            return bytearray("")
+        except OSError as e:
+            if e.errno in CONNECTION_LOST_ERRORS:
+                self._conn.update_state()
+                return bytearray()
+            raise
