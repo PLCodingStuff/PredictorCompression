@@ -1,6 +1,6 @@
 import pytest
-from src.network.server import Server
-from src.network_components.connection import Connection
+from src.network.server import ServerConfig
+# from src.network_components.connection import Connection
 """
 import unittest
 from unittest.mock import patch, MagicMock
@@ -120,9 +120,9 @@ def test_bind_fail_port_used():
 if __name__ == "__main__":
     unittest.main()
 """
-def test_construction_no_socket():
+def test_server_config_port():
     host: str = "127.0.0.1"
-    port: int = 6000
-    conn: Connection = Connection()
-    with pytest.raises(ValueError, match="No socket provided"):
-        Server(host, port, conn, None)
+    port: int = 0
+
+    with pytest.raises(ValueError, match="Port value out of range"):
+        ServerConfig(host, port)

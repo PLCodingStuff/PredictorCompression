@@ -63,7 +63,7 @@ class ServerConfig:
         except ValueError:
             raise ValueError("Invalid host name")
 
-        if self.port <= 0:
+        if self.port <= 0 or self.port > 65536:
             raise ValueError("Port value out of range")
 
         if self.timeout < 0.0:
