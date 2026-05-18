@@ -80,6 +80,7 @@ class ServerSocketManager:
         socket_factory: SocketFactory = default_socket_factory,
     ) -> None:
         self._conn_s: socket | None = None
+        self._sock: socket | None = None
         self._config: ServerConfig = config
         self._socket_factory: SocketFactory = socket_factory
 
@@ -88,7 +89,6 @@ class ServerSocketManager:
             self._sock: socket = self._socket_factory(self._config.timeout)
 
             self._bind_and_listen()
-            # print(f"Server listening on {self._config.host}:{self._config.port}")
             return self
         except OSError as e:
             self._close_server_socket()
