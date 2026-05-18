@@ -32,7 +32,7 @@ class ConnectionLostError(OSError):
     ...
 
 
-class ServerTerminatingError(OSError):
+class AcceptTimeOutError(OSError):
     """Raised when the server fails to establish a connection after all retries."""
 
     def __init__(self, retries: int):
@@ -126,7 +126,7 @@ class ServerSocketManager:
                 return str(addr)
             except timeout:
                 continue
-        raise ServerTerminatingError(self._config.retries)
+        raise AcceptTimeOutError(self._config.retries)
 
     def get_message(self) -> bytearray:
         try:
@@ -158,7 +158,7 @@ class ServerManager(Observer):
         with self._sock_man as server:
             try:
                 server.accept()
-            except ServerTerminatingError:
+            except AcceptTimeOutError:
                 self._conn.update_state()
                 return
 
