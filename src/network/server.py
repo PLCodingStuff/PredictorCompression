@@ -4,10 +4,9 @@ from socket import (
     SOL_SOCKET,
     SO_REUSEADDR,
     SHUT_RDWR,
-    AF_INET,
-    SOCK_STREAM,
+    # AF_INET,
+    # SOCK_STREAM,
 )
-from typing import Callable, ParamSpec, TypeAlias
 from dataclasses import dataclass
 import errno
 from threading import Event
@@ -21,9 +20,6 @@ CONNECTION_LOST_ERRORS = {
     errno.EPIPE,
     errno.ETIMEDOUT,
 }
-
-P = ParamSpec("P")
-SocketFactory: TypeAlias = Callable[P, socket]
 
 
 class ConnectionLostError(OSError):
@@ -39,14 +35,6 @@ class AcceptTimeOutError(OSError):
         super().__init__(
             f"No connection established after {retries} retries. Terminating..."
         )
-
-
-def default_socket_factory(timeout: int) -> socket:
-
-    sock = socket(AF_INET, SOCK_STREAM)
-    sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-    sock.settimeout(timeout)
-    return sock
 
 
 @dataclass
@@ -80,15 +68,16 @@ class ServerSocketManager:
     def __init__(
         self,
         config: ServerConfig,
-        socket_factory: SocketFactory = default_socket_factory,
+        sock: socket,
     ) -> None:
         self._sock: socket | None = None
         self._config: ServerConfig = config
-        self._socket_factory: SocketFactory = socket_factory
+        self._sock: socket = sock
 
     def __enter__(self) -> "ServerSocketManager":
         try:
-            self._sock = self._socket_factory(self._config.timeout)
+            self._sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+            self._sock.settimeout(self._config.timeout)
 
             self._bind_and_listen()
             return self
