@@ -107,12 +107,31 @@ class ServerSocketManager:
 
 
 class PeerClientSocketManager:
-    def __init__(self, sock: socket, buffer_size: int = 1024):
+    def __init__(self, buffer_size: int = 1024):
         if buffer_size <= 0:
             raise ValueError("Invalid Buffer Size")
 
         self._buffer_size: int = buffer_size
-        self._sock: socket = sock
+        self._sock: socket | None = None
+
+    def __enter__(self) -> "PeerClientSocketManager":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        self._close_socket()
+        return True
+
+    def _close_socket(self):
+        if self._sock:
+            try:
+                self._sock.shutdown(SHUT_RDWR)
+            except OSError:
+                pass
+            self._sock.close()
+            self._sock = None
+
+    def set_socket(self, sock: socket):
+        self._sock = sock
 
     def get_message(self) -> bytearray:
         try:
@@ -127,21 +146,17 @@ class PeerClientSocketManager:
                 raise ConnectionLostError(str(e))
             raise
 
-    def close(self):
-        if self._sock:
-            try:
-                self._sock.shutdown(SHUT_RDWR)
-            except OSError:
-                pass
-            self._sock.close()
-            self._sock = None
-
 
 class ServerManager(Observer):
     def __init__(
-        self, server_sock_man: ServerSocketManager, conn: Connection, stop_event: Event
+        self,
+        server_sock_man: ServerSocketManager,
+        peer_client_sock_man: PeerClientSocketManager,
+        conn: Connection,
+        stop_event: Event,
     ) -> None:
         self._sock_man: ServerSocketManager = server_sock_man
+        self._peer_c_sock_man: PeerClientSocketManager = peer_client_sock_man
         self._conn: Connection = conn
         self._stop_event = stop_event
 
@@ -152,15 +167,16 @@ class ServerManager(Observer):
     def run(self) -> None:
         with self._sock_man as server:
             try:
-                server.accept()
+                self._peer_c_sock_man.set_socket(server.accept())
             except AcceptTimeOutError:
                 self._conn.update_state()
                 return
 
-            while not self._stop_event.is_set():
-                try:
-                    msg = server.get_message()
-                    msg
-                    # TODO: handle msg
-                except ConnectionLostError:
-                    self._conn.update_state()
+            with self._peer_c_sock_man as peer_sock:
+                while not self._stop_event.is_set():
+                    try:
+                        msg = peer_sock.get_message()
+                        msg
+                        # TODO: handle msg
+                    except ConnectionLostError:
+                        self._conn.update_state()
