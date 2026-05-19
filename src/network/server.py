@@ -55,7 +55,7 @@ class ServerConfig:
     port: int
     timeout: float = 5.0
     retries: int = 3
-    buffer_size: int = 1024
+    # buffer_size: int = 1024
 
     def __post_init__(self):
         try:
@@ -71,9 +71,9 @@ class ServerConfig:
 
         if self.retries < 0:
             raise ValueError("Retries value out of range")
-        
-        if self.buffer_size <= 0:
-            raise ValueError("Invalid Buffer Size")
+
+        # if self.buffer_size <= 0:
+        #     raise ValueError("Invalid Buffer Size")
 
 
 class ServerSocketManager:
@@ -82,7 +82,6 @@ class ServerSocketManager:
         config: ServerConfig,
         socket_factory: SocketFactory = default_socket_factory,
     ) -> None:
-        self._conn_s: socket | None = None
         self._sock: socket | None = None
         self._config: ServerConfig = config
         self._socket_factory: SocketFactory = socket_factory
@@ -94,26 +93,16 @@ class ServerSocketManager:
             self._bind_and_listen()
             return self
         except OSError as e:
-            self._close_server_socket()
+            self._close_socket()
             if e.errno == errno.EACCES:
                 raise PermissionError(f"Port {self._config.port} is occupied")
             raise
 
     def __exit__(self, exc_type, exc, tb) -> bool:
-        self._close_conn_socket()
-        self._close_server_socket()
-        return False
+        self._close_socket()
+        return True
 
-    def _close_conn_socket(self) -> None:
-        if self._conn_s:
-            try:
-                self._conn_s.shutdown(SHUT_RDWR)
-            except OSError:
-                pass
-            self._conn_s.close()
-            self._conn_s = None
-
-    def _close_server_socket(self) -> None:
+    def _close_socket(self) -> None:
         if self._sock:
             self._sock.close()
             self._sock = None
@@ -122,18 +111,27 @@ class ServerSocketManager:
         self._sock.bind((self._config.host, self._config.port))
         self._sock.listen(1)
 
-    def accept(self) -> str:
+    def accept(self) -> socket:
         for _ in range(self._config.retries):
             try:
-                self._conn_s, addr = self._sock.accept()
-                return str(addr)
+                c_sock, _ = self._sock.accept()
+                return c_sock
             except timeout:
                 continue
         raise AcceptTimeOutError(self._config.retries)
 
+
+class PeerClientSocketManager:
+    def __init__(self, sock: socket, buffer_size: int = 1024):
+        if buffer_size <= 0:
+            raise ValueError("Invalid Buffer Size")
+
+        self._buffer_size: int = buffer_size
+        self._sock: socket = sock
+
     def get_message(self) -> bytearray:
         try:
-            message: bytearray = self._conn_s.recv(self._config.buffer_size)
+            message: bytearray = self._sock.recv(self._buffer_size)
 
             if not message:
                 raise ConnectionLostError("Peer disconnected gracefully.")
@@ -143,6 +141,15 @@ class ServerSocketManager:
             if e.errno in CONNECTION_LOST_ERRORS:
                 raise ConnectionLostError(str(e))
             raise
+
+    def close(self):
+        if self._sock:
+            try:
+                self._sock.shutdown(SHUT_RDWR)
+            except OSError:
+                pass
+            self._sock.close()
+            self._sock = None
 
 
 class ServerManager(Observer):
