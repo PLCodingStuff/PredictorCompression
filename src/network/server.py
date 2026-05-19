@@ -38,12 +38,11 @@ class AcceptTimeOutError(OSError):
 
 
 @dataclass
-class ServerConfig:
+class ServerSocketConfig:
     host: str
     port: int
     timeout: float = 5.0
     retries: int = 3
-    # buffer_size: int = 1024
 
     def __post_init__(self):
         try:
@@ -60,18 +59,15 @@ class ServerConfig:
         if self.retries < 0:
             raise ValueError("Retries value out of range")
 
-        # if self.buffer_size <= 0:
-        #     raise ValueError("Invalid Buffer Size")
-
 
 class ServerSocketManager:
     def __init__(
         self,
-        config: ServerConfig,
+        config: ServerSocketConfig,
         sock: socket,
     ) -> None:
         self._sock: socket | None = None
-        self._config: ServerConfig = config
+        self._config: ServerSocketConfig = config
         self._sock: socket = sock
 
     def __enter__(self) -> "ServerSocketManager":
