@@ -79,12 +79,14 @@ class ServerSocketManager:
             return self
         except OSError as e:
             self._close_socket()
-            if e.errno == errno.EACCES:
+            if e.args[0] == errno.EACCES:
                 raise PermissionError(f"Port {self._config.port} is occupied")
             raise
 
     def __exit__(self, exc_type, exc, tb) -> bool:
         self._close_socket()
+        if exc_type:
+            return False
         return True
 
     def _close_socket(self) -> None:
@@ -119,6 +121,8 @@ class PeerClientSocketManager:
 
     def __exit__(self, exc_type, exc, tb) -> bool:
         self._close_socket()
+        if exc_type:
+            return False
         return True
 
     def _close_socket(self):

@@ -1,6 +1,16 @@
 import pytest
 from unittest.mock import MagicMock
-from src.network.server import ServerSocketConfig, ServerSocketManager
+
+from src.network.server import (
+    ServerSocketConfig,
+    ServerSocketManager,
+    AcceptTimeOutError,
+    PeerClientSocketManager,
+    ConnectionLostError,
+)
+
+from socket import timeout
+import errno
 
 
 def test_server_socket_config():
@@ -59,18 +69,59 @@ def test_server_socket_manager_enter_exit():
         pass
 
     # Server socket setup
-    assert mock_sock.setsockopt.called_once()
-    assert mock_sock.settimeout.called_once()
+    mock_sock.setsockopt.assert_called_once()
+    mock_sock.settimeout.assert_called_once()
 
     # Socket changed states
-    assert mock_sock.bind.called_once()
-    assert mock_sock.listen.called_once()
+    mock_sock.bind.assert_called_once()
+    mock_sock.listen.assert_called_once()
 
     # Socket closed
-    assert mock_sock.close.called_once()
+    mock_sock.close.assert_called_once()
 
     # Accept was not called
-    assert not mock_sock.accept.called
+    mock_sock.accept.assert_not_called
+
+
+def test_server_socket_manager_enter_exit_bind_fail():
+    host: str = "127.0.0.1"
+    port: int = 6000
+
+    conf: ServerSocketConfig = ServerSocketConfig(host, port)
+    mock_sock: MagicMock = MagicMock()
+    mock_sock.bind.side_effect = OSError(errno.EACCES)
+    server_sock_man: ServerSocketManager = ServerSocketManager(conf, mock_sock)
+
+    try:
+        with server_sock_man:
+            pass
+    except PermissionError:
+        pass
+
+    mock_sock.bind.assert_called
+    mock_sock.listen.assert_not_called
+    mock_sock.close.assert_called
+
+
+def test_server_socket_manager_enter_exit_listen_fail():
+    host: str = "127.0.0.1"
+    port: int = 6000
+
+    conf: ServerSocketConfig = ServerSocketConfig(host, port)
+    mock_sock: MagicMock = MagicMock()
+    mock_sock.listen.side_effect = OSError(errno.EACCES)
+    server_sock_man: ServerSocketManager = ServerSocketManager(conf, mock_sock)
+
+    try:
+        with server_sock_man:
+            pass
+    except OSError:
+        pass
+
+    mock_sock.bind.assert_called
+    mock_sock.listen.assert_called
+    mock_sock.close.assert_called
+
 
 def test_server_socket_manager_accept():
     host: str = "127.0.0.1"
@@ -88,5 +139,72 @@ def test_server_socket_manager_accept():
     with server_sock_man as sock:
         client_sock = sock.accept()
 
-    assert mock_sock.accept.called
+    mock_sock.accept.assert_called
     assert client_sock == mock_client_sock
+
+
+def test_server_socket_manager_accept_fail():
+    host: str = "127.0.0.1"
+    port: int = 6000
+
+    conf: ServerSocketConfig = ServerSocketConfig(host, port)
+
+    mock_sock: MagicMock = MagicMock()
+    mock_sock.accept.side_effect = timeout
+
+    server_sock_man: ServerSocketManager = ServerSocketManager(conf, mock_sock)
+
+    try:
+        with server_sock_man as sock:
+            sock.accept()
+    except AcceptTimeOutError:
+        pass
+
+    mock_sock.accept.assert_called
+
+
+def test_peer_client_socket_manager():
+    manager: PeerClientSocketManager = PeerClientSocketManager()
+    mock_sock: MagicMock = MagicMock()
+
+    manager.set_socket(mock_sock)
+
+    with manager:
+        pass
+
+    mock_sock.close.assert_called_once()
+    mock_sock.shutdown.assert_called_once()
+
+
+def test_peer_client_socket_manager_buffer_size_fail():
+    buffer_size: int = 0
+
+    with pytest.raises(ValueError, match="Invalid Buffer Size"):
+        PeerClientSocketManager(buffer_size=buffer_size)
+
+
+def test_peer_client_socket_manager_get_message():
+    manager: PeerClientSocketManager = PeerClientSocketManager()
+
+    mock_sock: MagicMock = MagicMock()
+    mock_sock.recv.return_value = bytearray("Hello World", encoding="ASCII")
+
+    manager.set_socket(mock_sock)
+    msg: bytearray = None
+    with manager as m:
+        msg = m.get_message()
+
+    assert msg == bytearray("Hello World", encoding="ASCII")
+
+
+def test_peer_client_socket_manager_get_message_fail():
+    manager: PeerClientSocketManager = PeerClientSocketManager()
+
+    mock_sock: MagicMock = MagicMock()
+    mock_sock.recv.return_value = bytearray()
+
+    manager.set_socket(mock_sock)
+    
+    with pytest.raises(ConnectionLostError):
+        with manager as m:
+            m.get_message()
