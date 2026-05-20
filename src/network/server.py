@@ -63,8 +63,8 @@ class ServerSocketConfig:
 class ServerSocketManager:
     def __init__(
         self,
-        config: ServerSocketConfig,
         sock: socket,
+        config: ServerSocketConfig,
     ) -> None:
         self._sock: socket | None = None
         self._config: ServerSocketConfig = config
@@ -85,9 +85,10 @@ class ServerSocketManager:
 
     def __exit__(self, exc_type, exc, tb) -> bool:
         self._close_socket()
-        if exc_type:
-            return False
-        return True
+        if exc_type == AcceptTimeOutError:
+            return True
+        return False
+
 
     def _close_socket(self) -> None:
         if self._sock:
@@ -121,9 +122,9 @@ class PeerClientSocketManager:
 
     def __exit__(self, exc_type, exc, tb) -> bool:
         self._close_socket()
-        if exc_type:
-            return False
-        return True
+        if exc_type == ConnectionLostError:
+            return True
+        return False
 
     def _close_socket(self):
         if self._sock:
@@ -173,9 +174,9 @@ class ServerManager(Observer):
             try:
                 self._peer_c_sock_man.set_socket(server.accept())
             except AcceptTimeOutError:
-                self._conn.update_state()
                 return
 
+            self._conn.update_state()
             with self._peer_c_sock_man as peer_sock:
                 while not self._stop_event.is_set():
                     try:
