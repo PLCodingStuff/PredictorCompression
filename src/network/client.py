@@ -1,130 +1,92 @@
 from src.network_components.connection import Connection
 from src.interfaces.observer import Observer
-from socket import error as sockerror, SHUT_RDWR
-from src.payload_compression.compression import Compression
-from time import sleep
+from src.errors.client_errors import ConnectTimeOutError
+
+from dataclasses import dataclass
+from threading import Event
+from socket import socket, SHUT_RDWR, timeout
+from ipaddress import ip_address
 
 
-class Client(Observer):
-    """
-    Client class that connects to a peer server, sends compressed messages,
-    and handles the communication. It uses a retry mechanism for establishing
-    the connection and manages the message-sending process.
+@dataclass
+class ClientSocketConfig:
+    peer_host: str
+    peer_port: int
+    retries: int = 3
+    timeout: float = 5
 
-    Attributes:
-        _compressor (Compression): Instance of the Compression class for message compression.
-        _peer_host (str): The host address of the peer server.
-        _peer_port (int): The port number of the peer server.
-        _retries (int): The maximum number of connection retry attempts.
-        _delay (float): The delay between each connection retry.
-
-    Methods:
-        start() -> None: Starts the client and attempts to connect to the peer server.
-        handler() -> None: Handles user input and manages message sending in a loop.
-        close() -> None: Closes the client connection and shuts down the socket.
-    """
-
-    def __init__(
-        self,
-        peer_host: str,
-        peer_port: int,
-        conn: Connection,
-        retries: int = 7,
-        delay: float = 3.0,
-    ) -> None:
-        """
-        Initialize the Client object with peer server details and connection parameters.
-
-        Args:
-            peer_host (str): The peer server's host address.
-            peer_port (int): The peer server's port number.
-            conn (Connection): The shared connection object.
-            retries (int, optional): The number of connection retry attempts. Default is 7.
-            delay (float, optional): The delay between connection attempts in seconds. Default is 3.0.
-
-        The Client object uses the Connection object to monitor and manage the connection state.
-        """
-        self._peer_host: str = peer_host
-        self._peer_port: int = peer_port
-        self._retries: int = retries
-        self._delay: float = delay
-        self._conn = conn
-
-    def start(self) -> None:
-        """
-        Attempt to connect to the peer server with retries.
-
-        This method tries to establish a connection to the peer server. If the connection is refused or fails, it retries the connection based on the `retries` and `delay` settings. If the maximum number of retries is exceeded or a timeout occurs, appropriate exceptions are raised.
-
-        Raises:
-            ConnectionAbortedError: If the connection cannot be established after all retries.
-            TimeoutError: If the connection attempt times out.
-        """
-        retry: int = 0
+    def __post_init__(self):
         try:
-            while retry < self._retries:
-                try:
-                    self._socket.settimeout(10)
-                    self._socket.connect((self._peer_host, self._peer_port))
-                    print(f"Connected to {self._peer_host}:{self._peer_port}")
-                    break
-                except ConnectionRefusedError:
-                    retry += 1
-                    sleep(self._delay)
+            ip_address(self.peer_host)
+        except ValueError:
+            raise ValueError("Invalid host address")
 
-            if retry == self._retries:
-                raise ConnectionAbortedError
-        except TimeoutError:
-            print("Connection timed out.")
-        except ConnectionAbortedError:
-            print("Peer server's not running. Terminating process.")
-            raise ConnectionAbortedError
+        if self.peer_port <= 0 or self.peer_port > 65355:
+            raise ValueError("Invalid port number")
+
+        if self.retries < 0:
+            raise ValueError("Invalid number of retries")
+
+        if self.timeout < 0.0:
+            raise ValueError("Invalid timeout")
 
 
-    def handler(self, compressor: Compression):
-        """
-        Handle user input and send messages to the peer server.
+class ClientSocketManager:
+    def __init__(self, sock: socket, config: ClientSocketConfig):
+        self._config = config
+        self._sock = sock
 
-        This method continuously reads user input and sends messages to the peer server. The user can type 'exit' to terminate the communication and close the connection. If the connection is lost, the loop will break, and the client will terminate.
-        """
-        while True:
-            message = input("")
+    def __enter__(self) -> "ClientSocketManager":
+        self._sock.settimeout(self._config.timeout)
+
+        for _ in range(self._config.retries):
             try:
-                compressed_msg: bytearray = compressor.payload_compression(message)
-                
-                if not self._conn.state:
-                    raise ConnectionError
-                
-                self._socket.sendall(compressed_msg)
+                self._sock.connect((self._config.peer_host, self._config.peer_port))
+                return self
+            except timeout:
+                pass
 
-                if message.lower() == "exit":
-                    print("Exiting chat...")
-                    break
+            raise ConnectTimeOutError
 
-            except ConnectionError:
-                print("Error: Connection Timed Out")
-                break
-            except ValueError as e:
-                print(str(e))
-                break
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        self._close_socket()
+        if exc_type == ConnectTimeOutError:
+            return True
+        return False
 
-    def close(self):
-        """
-        Close the client socket and terminate the connection.
-
-        This method attempts to gracefully shut down the client socket. If there is no active connection, it catches the socket error and closes the socket.
-        """
-        if self._socket is not None:
+    def _close_socket(self):
+        if self._sock is not None:
             try:
-                self._socket.shutdown(SHUT_RDWR)
-            except sockerror as e:
-                # This error is due to lack of connection, so
-                # `shutdown()` cannot be called without one.
-                if e.errno != 10057:
-                    print(f"Client Error {e}")
-            self._socket.close()
-            self._socket = None
+                self._sock.shutdown(SHUT_RDWR)
+            except OSError:
+                pass
+            self._sock.close()
+            self._sock = None
+
+    def send_message(self, msg: bytearray):
+        self._sock.sendall(msg)
+
+class ClientManager(Observer):
+    def __init__(self, client_socket_man: ClientSocketManager, conn: Connection, stop_event: Event):
+        self._c_sock_man: ClientSocketManager = client_socket_man
+        self._conn: Connection = conn
+        self._stop_event: Event = stop_event
 
     def update(self, data: Connection):
         if not data.state:
-            self.close()
+            self._stop_event.set()
+
+    def run(self):
+        with self._c_sock_man as c_man:
+            self._conn.update_state()
+
+            while not self._stop_event.is_set():
+                msg: bytearray = bytearray()
+                c_man.send_message(msg)
+
+                if not msg:
+                    self._conn.update_state()
+
+                # Or
+                # if msg == "exit":
+                #   self._conn.update_state()

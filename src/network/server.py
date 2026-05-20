@@ -13,28 +13,7 @@ from threading import Event
 from ipaddress import ip_address
 from src.interfaces.observer import Observer
 from src.network_components.connection import Connection
-
-CONNECTION_LOST_ERRORS = {
-    errno.ECONNRESET,
-    errno.ECONNABORTED,
-    errno.EPIPE,
-    errno.ETIMEDOUT,
-}
-
-
-class ConnectionLostError(OSError):
-    """Raised when the client disconnects suddenly."""
-
-    ...
-
-
-class AcceptTimeOutError(OSError):
-    """Raised when the server fails to establish a connection after all retries."""
-
-    def __init__(self, retries: int):
-        super().__init__(
-            f"No connection established after {retries} retries. Terminating..."
-        )
+from src.errors.server_errors import ConnectionLostError, AcceptTimeOutError, CONNECTION_LOST_ERRORS
 
 
 @dataclass
