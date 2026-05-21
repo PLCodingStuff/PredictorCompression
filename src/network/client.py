@@ -46,12 +46,10 @@ class ClientSocketManager:
             except timeout:
                 pass
 
-            raise ConnectTimeOutError
+            raise ConnectTimeOutError(self._config.retries)
 
     def __exit__(self, exc_type, exc, tb) -> bool:
         self._close_socket()
-        if exc_type == ConnectTimeOutError:
-            return True
         return False
 
     def _close_socket(self):
@@ -66,8 +64,14 @@ class ClientSocketManager:
     def send_message(self, msg: bytearray):
         self._sock.sendall(msg)
 
+
 class ClientManager(Observer):
-    def __init__(self, client_socket_man: ClientSocketManager, conn: Connection, stop_event: Event):
+    def __init__(
+        self,
+        client_socket_man: ClientSocketManager,
+        conn: Connection,
+        stop_event: Event,
+    ) -> None:
         self._c_sock_man: ClientSocketManager = client_socket_man
         self._conn: Connection = conn
         self._stop_event: Event = stop_event
@@ -77,16 +81,20 @@ class ClientManager(Observer):
             self._stop_event.set()
 
     def run(self):
-        with self._c_sock_man as c_man:
-            self._conn.update_state()
+        try: 
+            with self._c_sock_man as c_man:
+                self._conn.update_state()
 
-            while not self._stop_event.is_set():
                 msg: bytearray = bytearray()
-                c_man.send_message(msg)
+                while not self._stop_event.is_set():
+                    # TODO: add message pipeline
+                    c_man.send_message(msg)
 
-                if not msg:
-                    self._conn.update_state()
+                    if not msg:
+                        self._conn.update_state()
 
-                # Or
-                # if msg == "exit":
-                #   self._conn.update_state()
+                    # Or
+                    # if msg == "exit":
+                    #   self._conn.update_state()
+        except ConnectTimeOutError:
+            return
