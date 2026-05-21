@@ -17,14 +17,14 @@ import errno
 class TestConfig:
     port: int = 6000
     host: str = "127.0.0.1"
+
     def test_server_socket_config(self):
         conf = ServerSocketConfig(self.host, self.port)
-    
+
         assert conf.host == self.host
         assert conf.port == self.port
         assert conf.timeout == 5.0
         assert conf.retries == 3
-
 
     def test_server_socket_config_host_error(self):
         invalid_host: str = "127.0.0."
@@ -32,18 +32,21 @@ class TestConfig:
         with pytest.raises(ValueError, match="Invalid host name"):
             ServerSocketConfig(invalid_host, self.port)
 
-
-    def test_server_socket_config_port_error(self):
+    def test_server_socket_config_port_error_smaller(self):
         invalid_port: int = 0
 
         with pytest.raises(ValueError, match="Port value out of range"):
             ServerSocketConfig(self.host, invalid_port)
 
+    def test_server_socket_config_port_error_bigger(self):
+        invalid_port: int = 700000
+
+        with pytest.raises(ValueError, match="Port value out of range"):
+            ServerSocketConfig(self.host, invalid_port)
 
     def test_server_socket_config_timeout_error(self):
         with pytest.raises(ValueError, match="Timeout value out of range"):
             ServerSocketConfig(self.host, self.port, timeout=-1.0)
-
 
     def test_server_socket_config_retries_error(self):
         with pytest.raises(ValueError, match="Retries value out of range"):
@@ -53,7 +56,7 @@ class TestConfig:
 class TestServerSocketManager:
     host: str = "127.0.0.1"
     port: int = 6000
-    
+
     def test_server_socket_manager_enter_exit(self):
         conf: ServerSocketConfig = ServerSocketConfig(self.host, self.port)
         mock_sock: MagicMock = MagicMock()
@@ -76,7 +79,6 @@ class TestServerSocketManager:
         # Accept was not called
         mock_sock.accept.assert_not_called
 
-
     def test_server_socket_manager_enter_exit_bind_fail(self):
         conf: ServerSocketConfig = ServerSocketConfig(self.host, self.port)
         mock_sock: MagicMock = MagicMock()
@@ -92,7 +94,6 @@ class TestServerSocketManager:
         mock_sock.bind.assert_called
         mock_sock.listen.assert_not_called
         mock_sock.close.assert_called
-
 
     def test_server_socket_manager_enter_exit_listen_fail(self):
         conf: ServerSocketConfig = ServerSocketConfig(self.host, self.port)
@@ -110,7 +111,6 @@ class TestServerSocketManager:
         mock_sock.listen.assert_called
         mock_sock.close.assert_called
 
-
     def test_server_socket_manager_accept(self):
         conf: ServerSocketConfig = ServerSocketConfig(self.host, self.port)
 
@@ -126,7 +126,6 @@ class TestServerSocketManager:
 
         mock_sock.accept.assert_called
         assert client_sock == mock_client_sock
-
 
     def test_server_socket_manager_accept_fail(self):
         conf: ServerSocketConfig = ServerSocketConfig(self.host, self.port)
@@ -156,13 +155,11 @@ class TestPeerClientSocketManager:
         mock_sock.close.assert_called_once()
         mock_sock.shutdown.assert_called_once()
 
-
     def test_peer_client_socket_manager_buffer_size_fail(self):
         buffer_size: int = 0
 
         with pytest.raises(ValueError, match="Invalid Buffer Size"):
             PeerClientSocketManager(buffer_size=buffer_size)
-
 
     def test_peer_client_socket_manager_get_message(self):
         manager: PeerClientSocketManager = PeerClientSocketManager()
@@ -176,7 +173,6 @@ class TestPeerClientSocketManager:
             msg = m.get_message()
 
         assert msg == bytearray("Hello World", encoding="ASCII")
-
 
     def test_peer_client_socket_manager_get_message_fail(self):
         manager: PeerClientSocketManager = PeerClientSocketManager()
@@ -207,13 +203,18 @@ class TestServerManager:
         ]
         mock_sock.accept.return_value = (client_mock_sock, None)
 
-        server_socket_config: ServerSocketConfig = ServerSocketConfig(self.host, self.port)
+        server_socket_config: ServerSocketConfig = ServerSocketConfig(
+            self.host, self.port
+        )
         server_socket_manager: ServerSocketManager = ServerSocketManager(
             mock_sock, server_socket_config
         )
         peer_client_socket_manager: PeerClientSocketManager = PeerClientSocketManager()
         server_man: ServerManager = ServerManager(
-            server_socket_manager, peer_client_socket_manager, self.conn, self.stop_event
+            server_socket_manager,
+            peer_client_socket_manager,
+            self.conn,
+            self.stop_event,
         )
         self.conn.attach(server_man)
 
@@ -221,19 +222,25 @@ class TestServerManager:
 
         assert client_mock_sock.recv.call_count == 2
 
-
     def test_server_manager_fail_accept_time_out(self):
         for tries in range(1, 4):
             mock_sock: MagicMock = MagicMock()
 
             mock_sock.accept.side_effect = timeout
-            server_socket_config: ServerSocketConfig = ServerSocketConfig(self.host, self.port, retries=tries)
+            server_socket_config: ServerSocketConfig = ServerSocketConfig(
+                self.host, self.port, retries=tries
+            )
             server_socket_manager: ServerSocketManager = ServerSocketManager(
                 mock_sock, server_socket_config
             )
-            peer_client_socket_manager: PeerClientSocketManager = PeerClientSocketManager()
+            peer_client_socket_manager: PeerClientSocketManager = (
+                PeerClientSocketManager()
+            )
             server_man: ServerManager = ServerManager(
-                server_socket_manager, peer_client_socket_manager, self.conn, self.stop_event
+                server_socket_manager,
+                peer_client_socket_manager,
+                self.conn,
+                self.stop_event,
             )
             self.conn.attach(server_man)
 
