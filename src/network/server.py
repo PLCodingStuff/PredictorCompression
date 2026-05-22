@@ -4,8 +4,8 @@ from socket import (
     SOL_SOCKET,
     SO_REUSEADDR,
     SHUT_RDWR,
-    # AF_INET,
-    # SOCK_STREAM,
+    AF_INET,
+    SOCK_STREAM,
 )
 from typing import Protocol
 from dataclasses import dataclass
@@ -44,18 +44,17 @@ class IServerSocket(Protocol):
     def __exit__(self, exc_type, exc, tb) -> bool: ...
     def accept(self) -> socket: ...
 
-class ServerSocketManager:
+class ServerSocket(IServerSocket):
     def __init__(
         self,
-        sock: socket,
         config: ServerSocketConfig,
     ) -> None:
         self._sock: socket | None = None
         self._config: ServerSocketConfig = config
-        self._sock: socket = sock
 
-    def __enter__(self) -> "ServerSocketManager":
+    def __enter__(self) -> "IServerSocket":
         try:
+            self._sock = socket(AF_INET, SOCK_STREAM)
             self._sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
             self._sock.settimeout(self._config.timeout)
 
@@ -139,12 +138,12 @@ class PeerClientSocketManager:
 class ServerManager(Observer):
     def __init__(
         self,
-        server_sock_man: ServerSocketManager,
+        server_sock: IServerSocket,
         peer_client_sock_man: PeerClientSocketManager,
         conn: Connection,
         stop_event: Event,
     ) -> None:
-        self._sock_man: ServerSocketManager = server_sock_man
+        self._sock: IServerSocket = server_sock
         self._peer_c_sock_man: PeerClientSocketManager = peer_client_sock_man
         self._conn: Connection = conn
         self._stop_event = stop_event
@@ -154,7 +153,7 @@ class ServerManager(Observer):
             self._stop_event.set()
 
     def run(self) -> None:
-        with self._sock_man as server:
+        with self._sock as server:
             try:
                 self._peer_c_sock_man.set_socket(server.accept())
             except AcceptTimeOutError:
