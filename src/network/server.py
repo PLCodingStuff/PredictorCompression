@@ -7,6 +7,7 @@ from socket import (
     # AF_INET,
     # SOCK_STREAM,
 )
+from typing import Protocol
 from dataclasses import dataclass
 import errno
 from threading import Event
@@ -38,6 +39,10 @@ class ServerSocketConfig:
         if self.retries < 0:
             raise ValueError("Retries value out of range")
 
+class IServerSocket(Protocol):
+    def __enter__(self) -> "IServerSocket": ...
+    def __exit__(self, exc_type, exc, tb) -> bool: ...
+    def accept(self) -> socket: ...
 
 class ServerSocketManager:
     def __init__(
