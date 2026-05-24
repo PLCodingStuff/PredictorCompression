@@ -3,15 +3,14 @@ from unittest.mock import MagicMock
 
 from src.network.server import (
     ServerSocketConfig,
-    ServerSocketManager,
     PeerClientSocketManager,
     ServerManager,
 )
+
+from src.errors.server_errors import AcceptTimeOutError
 from src.network_components.connection import Connection
 
-from socket import timeout
 from threading import Event
-import errno
 
 
 class TestConfig:
@@ -51,95 +50,6 @@ class TestConfig:
     def test_server_socket_config_retries_error(self):
         with pytest.raises(ValueError, match="Retries value out of range"):
             ServerSocketConfig(self.host, self.port, retries=-1)
-
-
-class TestServerSocketManager:
-    host: str = "127.0.0.1"
-    port: int = 6000
-
-    def test_server_socket_manager_enter_exit(self):
-        conf: ServerSocketConfig = ServerSocketConfig(self.host, self.port)
-        mock_sock: MagicMock = MagicMock()
-        server_sock_man: ServerSocketManager = ServerSocketManager(mock_sock, conf)
-
-        with server_sock_man:
-            pass
-
-        # Server socket setup
-        mock_sock.setsockopt.assert_called_once()
-        mock_sock.settimeout.assert_called_once()
-
-        # Socket changed states
-        mock_sock.bind.assert_called_once()
-        mock_sock.listen.assert_called_once()
-
-        # Socket closed
-        mock_sock.close.assert_called_once()
-
-        # Accept was not called
-        mock_sock.accept.assert_not_called
-
-    def test_server_socket_manager_enter_exit_bind_fail(self):
-        conf: ServerSocketConfig = ServerSocketConfig(self.host, self.port)
-        mock_sock: MagicMock = MagicMock()
-        mock_sock.bind.side_effect = OSError(errno.EACCES)
-        server_sock_man: ServerSocketManager = ServerSocketManager(mock_sock, conf)
-
-        try:
-            with server_sock_man:
-                pass
-        except PermissionError:
-            pass
-
-        mock_sock.bind.assert_called
-        mock_sock.listen.assert_not_called
-        mock_sock.close.assert_called
-
-    def test_server_socket_manager_enter_exit_listen_fail(self):
-        conf: ServerSocketConfig = ServerSocketConfig(self.host, self.port)
-        mock_sock: MagicMock = MagicMock()
-        mock_sock.listen.side_effect = OSError(errno.EACCES)
-        server_sock_man: ServerSocketManager = ServerSocketManager(mock_sock, conf)
-
-        try:
-            with server_sock_man:
-                pass
-        except OSError:
-            pass
-
-        mock_sock.bind.assert_called
-        mock_sock.listen.assert_called
-        mock_sock.close.assert_called
-
-    def test_server_socket_manager_accept(self):
-        conf: ServerSocketConfig = ServerSocketConfig(self.host, self.port)
-
-        mock_sock: MagicMock = MagicMock()
-        mock_client_sock: MagicMock = MagicMock()
-        mock_sock.accept.return_value = (mock_client_sock, None)
-
-        server_sock_man: ServerSocketManager = ServerSocketManager(mock_sock, conf)
-
-        client_sock = None
-        with server_sock_man as sock:
-            client_sock = sock.accept()
-
-        mock_sock.accept.assert_called
-        assert client_sock == mock_client_sock
-
-    def test_server_socket_manager_accept_fail(self):
-        conf: ServerSocketConfig = ServerSocketConfig(self.host, self.port)
-
-        mock_sock: MagicMock = MagicMock()
-        mock_sock.accept.side_effect = timeout  # Raises AcceptTimeOutError
-
-        server_sock_man: ServerSocketManager = ServerSocketManager(mock_sock, conf)
-
-        # Fails gracefully
-        with server_sock_man as sock:
-            sock.accept()
-
-        mock_sock.accept.assert_called
 
 
 class TestPeerClientSocketManager:
@@ -194,27 +104,24 @@ class TestServerManager:
     stop_event: Event = Event()
 
     def test_server_manager(self):
-        mock_sock: MagicMock = MagicMock()
         client_mock_sock: MagicMock = MagicMock()
 
         client_mock_sock.recv.side_effect = [
             bytearray("Hello World", encoding="ASCII"),
             bytearray(),
         ]
-        mock_sock.accept.return_value = (client_mock_sock, None)
 
-        server_socket_config: ServerSocketConfig = ServerSocketConfig(
-            self.host, self.port
-        )
-        server_socket_manager: ServerSocketManager = ServerSocketManager(
-            mock_sock, server_socket_config
-        )
+        # server_socket_config: ServerSocketConfig = ServerSocketConfig(
+        #     self.host, self.port
+        # )
+        server_sock: MagicMock = MagicMock()
+        server_sock.__enter__.return_value = server_sock
+        server_sock.accept.return_value = client_mock_sock
+
         peer_client_socket_manager: PeerClientSocketManager = PeerClientSocketManager()
+
         server_man: ServerManager = ServerManager(
-            server_socket_manager,
-            peer_client_socket_manager,
-            self.conn,
-            self.stop_event,
+            server_sock, peer_client_socket_manager, self.conn, self.stop_event
         )
         self.conn.attach(server_man)
 
@@ -223,27 +130,20 @@ class TestServerManager:
         assert client_mock_sock.recv.call_count == 2
 
     def test_server_manager_fail_accept_time_out(self):
-        for tries in range(1, 4):
-            mock_sock: MagicMock = MagicMock()
+        server_sock: MagicMock = MagicMock()
+        server_sock.__enter__.return_value = server_sock
+        server_sock.accept.side_effect = AcceptTimeOutError(3)
 
-            mock_sock.accept.side_effect = timeout
-            server_socket_config: ServerSocketConfig = ServerSocketConfig(
-                self.host, self.port, retries=tries
-            )
-            server_socket_manager: ServerSocketManager = ServerSocketManager(
-                mock_sock, server_socket_config
-            )
-            peer_client_socket_manager: PeerClientSocketManager = (
-                PeerClientSocketManager()
-            )
-            server_man: ServerManager = ServerManager(
-                server_socket_manager,
-                peer_client_socket_manager,
-                self.conn,
-                self.stop_event,
-            )
-            self.conn.attach(server_man)
+        peer_client_socket_manager: PeerClientSocketManager = PeerClientSocketManager()
 
-            server_man.run()
+        server_man: ServerManager = ServerManager(
+            server_sock,
+            peer_client_socket_manager,
+            self.conn,
+            self.stop_event,
+        )
+        self.conn.attach(server_man)
 
-            assert mock_sock.accept.call_count == server_socket_config.retries
+        server_man.run()
+
+        assert not server_man._peer_c_sock_man._sock
