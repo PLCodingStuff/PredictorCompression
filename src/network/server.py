@@ -1,3 +1,9 @@
+from src.interfaces.observer import Observer
+from src.network_components.connection import Connection
+from src.errors.server_errors import ConnectionLostError, AcceptTimeOutError, CONNECTION_LOST_ERRORS
+
+from typing import Protocol
+from dataclasses import dataclass
 from socket import (
     socket,
     timeout,
@@ -7,14 +13,9 @@ from socket import (
     AF_INET,
     SOCK_STREAM,
 )
-from typing import Protocol
-from dataclasses import dataclass
 import errno
 from threading import Event
 from ipaddress import ip_address
-from src.interfaces.observer import Observer
-from src.network_components.connection import Connection
-from src.errors.server_errors import ConnectionLostError, AcceptTimeOutError, CONNECTION_LOST_ERRORS
 
 
 @dataclass

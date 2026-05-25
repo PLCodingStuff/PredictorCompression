@@ -2,9 +2,10 @@ from src.network_components.connection import Connection
 from src.interfaces.observer import Observer
 from src.errors.client_errors import ConnectTimeOutError
 
+from typing import Protocol
 from dataclasses import dataclass
 from threading import Event
-from socket import socket, SHUT_RDWR, timeout
+from socket import socket, SHUT_RDWR, AF_INET, SOCK_STREAM, timeout
 from ipaddress import ip_address
 
 
@@ -31,12 +32,18 @@ class ClientSocketConfig:
             raise ValueError("Invalid timeout")
 
 
-class ClientSocketManager:
-    def __init__(self, sock: socket, config: ClientSocketConfig):
-        self._config = config
-        self._sock = sock
+class IClientSocket(Protocol):
+    def __enter__(self) -> "IClientSocket": ...
+    def __exit__(self, exc_type, exc, tb) -> bool: ...
+    def send_message(self, msg: bytearray) -> None: ...
 
-    def __enter__(self) -> "ClientSocketManager":
+
+class ClientSocket(IClientSocket):
+    def __init__(self, config: ClientSocketConfig):
+        self._config = config
+
+    def __enter__(self) -> "IClientSocket":
+        self._sock = socket(AF_INET, SOCK_STREAM)
         self._sock.settimeout(self._config.timeout)
 
         for _ in range(self._config.retries):
@@ -68,11 +75,11 @@ class ClientSocketManager:
 class ClientManager(Observer):
     def __init__(
         self,
-        client_socket_man: ClientSocketManager,
+        socket: IClientSocket,
         conn: Connection,
         stop_event: Event,
     ) -> None:
-        self._c_sock_man: ClientSocketManager = client_socket_man
+        self._sock: IClientSocket = socket
         self._conn: Connection = conn
         self._stop_event: Event = stop_event
 
@@ -81,14 +88,14 @@ class ClientManager(Observer):
             self._stop_event.set()
 
     def run(self):
-        try: 
-            with self._c_sock_man as c_man:
+        try:
+            with self._sock as sock:
                 self._conn.update_state()
 
                 msg: bytearray = bytearray()
                 while not self._stop_event.is_set():
                     # TODO: add message pipeline
-                    c_man.send_message(msg)
+                    sock.send_message(msg)
 
                     if not msg:
                         self._conn.update_state()
