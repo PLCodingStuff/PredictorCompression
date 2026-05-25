@@ -111,9 +111,6 @@ class TestServerManager:
             bytearray(),
         ]
 
-        # server_socket_config: ServerSocketConfig = ServerSocketConfig(
-        #     self.host, self.port
-        # )
         server_sock: MagicMock = MagicMock()
         server_sock.__enter__.return_value = server_sock
         server_sock.accept.return_value = client_mock_sock
