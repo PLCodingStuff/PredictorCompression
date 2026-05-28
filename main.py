@@ -1,8 +1,6 @@
 import threading
 from json import load
 from sys import argv
-from src.network.client import Client
-from src.network.server import Server
 from src.network_components.connection import Connection
 
 
@@ -136,11 +134,6 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
-    conn: Connection = Connection()
-    
-
-    from src.payload_compression.decompression import Decompression
-    decompressor: Decompression = Decompression()
+    ...
 
         

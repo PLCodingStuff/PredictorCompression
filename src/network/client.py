@@ -1,4 +1,5 @@
 from src.network_components.connection import Connection
+from src.business.messages.send_message import SendMessageProcessor
 from src.interfaces.observer import Observer
 from src.errors.client_errors import ConnectTimeOutError
 
@@ -78,11 +79,12 @@ class ClientManager(Observer):
         socket: IClientSocket,
         conn: Connection,
         stop_event: Event,
-        message_pipeline: list
+        message_proc: SendMessageProcessor    
     ) -> None:
         self._sock: IClientSocket = socket
         self._conn: Connection = conn
         self._stop_event: Event = stop_event
+        self._message_proc: SendMessageProcessor = message_proc
 
     def update(self, data: Connection):
         if not data.state:
@@ -93,9 +95,9 @@ class ClientManager(Observer):
             with self._sock as sock:
                 self._conn.update_state()
 
-                msg: bytearray = bytearray()
+                msg: str = ""
                 while not self._stop_event.is_set():
-                    # TODO: add message pipeline
+                    self._message_proc.prepare_to_send(msg)
                     sock.send_message(msg)
 
                     if not msg:
