@@ -1,6 +1,10 @@
 from src.interfaces.observer import Observer
 from src.network_components.connection import Connection
-from src.errors.server_errors import ConnectionLostError, AcceptTimeOutError, CONNECTION_LOST_ERRORS
+from src.errors.server_errors import (
+    ConnectionLostError,
+    AcceptTimeOutError,
+    CONNECTION_LOST_ERRORS,
+)
 
 from typing import Protocol
 from dataclasses import dataclass
@@ -40,10 +44,12 @@ class ServerSocketConfig:
         if self.retries < 0:
             raise ValueError("Retries value out of range")
 
+
 class IServerSocket(Protocol):
     def __enter__(self) -> "IServerSocket": ...
     def __exit__(self, exc_type, exc, tb) -> bool: ...
     def accept(self) -> socket: ...
+
 
 class ServerSocket(IServerSocket):
     def __init__(
@@ -72,7 +78,6 @@ class ServerSocket(IServerSocket):
         if exc_type == AcceptTimeOutError:
             return True
         return False
-
 
     def _close_socket(self) -> None:
         if self._sock:
@@ -143,11 +148,13 @@ class ServerManager(Observer):
         peer_client_sock_man: PeerClientSocketManager,
         conn: Connection,
         stop_event: Event,
+        message_pipeline: list,
     ) -> None:
         self._sock: IServerSocket = server_sock
         self._peer_c_sock_man: PeerClientSocketManager = peer_client_sock_man
         self._conn: Connection = conn
         self._stop_event = stop_event
+        self._msg_pipeline: list = message_pipeline
 
     def update(self, data: Connection) -> None:
         if not data.state:

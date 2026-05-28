@@ -78,6 +78,7 @@ class ClientManager(Observer):
         socket: IClientSocket,
         conn: Connection,
         stop_event: Event,
+        message_pipeline: list
     ) -> None:
         self._sock: IClientSocket = socket
         self._conn: Connection = conn
