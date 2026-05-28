@@ -1,4 +1,5 @@
 from src.interfaces.observer import Observer
+from src.business.messages.receive_message import ReceiveMessageProcessor
 from src.network_components.connection import Connection
 from src.errors.server_errors import (
     ConnectionLostError,
@@ -148,13 +149,13 @@ class ServerManager(Observer):
         peer_client_sock_man: PeerClientSocketManager,
         conn: Connection,
         stop_event: Event,
-        message_pipeline: list,
+        message_proc: ReceiveMessageProcessor
     ) -> None:
         self._sock: IServerSocket = server_sock
         self._peer_c_sock_man: PeerClientSocketManager = peer_client_sock_man
         self._conn: Connection = conn
         self._stop_event = stop_event
-        self._msg_pipeline: list = message_pipeline
+        self._msg_proc: ReceiveMessageProcessor = message_proc
 
     def update(self, data: Connection) -> None:
         if not data.state:
@@ -172,7 +173,7 @@ class ServerManager(Observer):
                 while not self._stop_event.is_set():
                     try:
                         msg = peer_sock.get_message()
-                        msg
-                        # TODO: handle msg
+                        self._msg_proc.parse_received(msg)
+                        
                     except ConnectionLostError:
                         self._conn.update_state()
