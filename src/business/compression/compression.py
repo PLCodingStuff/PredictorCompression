@@ -1,8 +1,7 @@
-from src.interfaces.message_handler import IMessageHandler
 from bitarray import bitarray
 
 
-class Compression(IMessageHandler):
+class Compression():
     """
     Class for compressing a string payload using a basic dictionary-based
     compression scheme. It uses a fixed-length substring hashing approach to
