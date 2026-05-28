@@ -79,7 +79,7 @@ class ClientManager(Observer):
         socket: IClientSocket,
         conn: Connection,
         stop_event: Event,
-        message_proc: SendMessageProcessor    
+        message_proc: SendMessageProcessor,
     ) -> None:
         self._sock: IClientSocket = socket
         self._conn: Connection = conn
@@ -97,11 +97,14 @@ class ClientManager(Observer):
 
                 msg: str = ""
                 while not self._stop_event.is_set():
-                    self._message_proc.prepare_to_send(msg)
-                    sock.send_message(msg)
-
                     if not msg:
                         self._conn.update_state()
+                        continue
+
+                    self._message_proc.prepare_to_send(msg)
+
+                    sock.send_message(msg)
+
 
                     # Or
                     # if msg == "exit":

@@ -1,12 +1,11 @@
+from src.network.client import ClientSocketConfig, ClientManager
+from src.network_components.connection import Connection
+from src.business.messages.send_message import SendMessageProcessor
+
 import pytest
 from unittest.mock import MagicMock
 
-# from socket import timeout
 from threading import Event
-
-from src.network.client import ClientSocketConfig, ClientManager
-# from src.errors.client_errors import ConnectTimeOutError
-from src.network_components.connection import Connection
 
 
 class TestClientSocketConfig:
@@ -59,14 +58,18 @@ class TestClientManager:
     stop_event: Event = Event()
 
     client_socket_config: ClientSocketConfig = ClientSocketConfig(host, port)
+
     def test_client_manager(self):
         mock_sock: MagicMock = MagicMock()
         mock_sock.__enter__.return_value = mock_sock
-        
-        client_manager: ClientManager = ClientManager(mock_sock, self.conn, self.stop_event)
+
+        send_message_proc: SendMessageProcessor = SendMessageProcessor()
+
+        client_manager: ClientManager = ClientManager(
+            mock_sock, self.conn, self.stop_event, send_message_proc
+        )
         self.conn.attach(client_manager)
 
         client_manager.run()
 
-        mock_sock.send_message.assert_called_once()
-        
+        mock_sock.send_message.assert_not_called()

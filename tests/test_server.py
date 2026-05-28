@@ -7,6 +7,8 @@ from src.network.server import (
     ServerManager,
 )
 
+from src.business.messages.receive_message import ReceiveMessageProcessor
+
 from src.errors.server_errors import AcceptTimeOutError
 from src.network_components.connection import Connection
 
@@ -117,8 +119,14 @@ class TestServerManager:
 
         peer_client_socket_manager: PeerClientSocketManager = PeerClientSocketManager()
 
+        receive_message_proc: ReceiveMessageProcessor = ReceiveMessageProcessor()
+
         server_man: ServerManager = ServerManager(
-            server_sock, peer_client_socket_manager, self.conn, self.stop_event
+            server_sock,
+            peer_client_socket_manager,
+            self.conn,
+            self.stop_event,
+            receive_message_proc,
         )
         self.conn.attach(server_man)
 
@@ -132,12 +140,14 @@ class TestServerManager:
         server_sock.accept.side_effect = AcceptTimeOutError(3)
 
         peer_client_socket_manager: PeerClientSocketManager = PeerClientSocketManager()
+        receive_message_proc: ReceiveMessageProcessor = ReceiveMessageProcessor()
 
         server_man: ServerManager = ServerManager(
             server_sock,
             peer_client_socket_manager,
             self.conn,
             self.stop_event,
+            receive_message_proc
         )
         self.conn.attach(server_man)
 
