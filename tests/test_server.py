@@ -117,6 +117,8 @@ class TestServerManager:
         server_sock.__enter__.return_value = server_sock
         server_sock.accept.return_value = client_mock_sock
 
+        output_mock: MagicMock = MagicMock()
+
         peer_client_socket_manager: PeerClientSocketManager = PeerClientSocketManager()
 
         receive_message_proc: ReceiveMessageProcessor = ReceiveMessageProcessor()
@@ -127,6 +129,7 @@ class TestServerManager:
             self.conn,
             self.stop_event,
             receive_message_proc,
+            output_mock,
         )
         self.conn.attach(server_man)
 
@@ -141,13 +144,15 @@ class TestServerManager:
 
         peer_client_socket_manager: PeerClientSocketManager = PeerClientSocketManager()
         receive_message_proc: ReceiveMessageProcessor = ReceiveMessageProcessor()
+        output_mock: MagicMock = MagicMock()
 
         server_man: ServerManager = ServerManager(
             server_sock,
             peer_client_socket_manager,
             self.conn,
             self.stop_event,
-            receive_message_proc
+            receive_message_proc,
+            output_mock,
         )
         self.conn.attach(server_man)
 
