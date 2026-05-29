@@ -9,6 +9,7 @@ from src.network_components.connection import Connection
 from src.business.messages.receive_message import ReceiveMessageProcessor
 from src.business.messages.send_message import SendMessageProcessor
 from src.business.messages.message_source import CLIMessageSource
+from src.business.messages.message_output import CLIMessageOutput
 
 import threading
 
@@ -57,12 +58,18 @@ class Node:
         server_sock: ServerSocket = ServerSocket(server_conf)
 
         msg_proc: ReceiveMessageProcessor = ReceiveMessageProcessor()
+        msg_out: CLIMessageOutput = CLIMessageOutput()
 
         peer_client: PeerClientSocketManager = PeerClientSocketManager()
         server_stop_event = threading.Event = threading.Event()
 
         return ServerManager(
-            server_sock, peer_client, self._connection, server_stop_event, msg_proc
+            server_sock,
+            peer_client,
+            self._connection,
+            server_stop_event,
+            msg_proc,
+            msg_out,
         )
 
     def __init_client(self, host, port) -> ClientManager:
