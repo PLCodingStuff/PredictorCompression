@@ -1,5 +1,6 @@
 from src.network_components.connection import Connection
 from src.business.messages.send_message import SendMessageProcessor
+from src.business.messages.message_source import MessageSource
 from src.interfaces.observer import Observer
 from src.errors.client_errors import ConnectTimeOutError
 

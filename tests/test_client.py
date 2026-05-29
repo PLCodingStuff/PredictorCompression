@@ -64,12 +64,15 @@ class TestClientManager:
         mock_sock.__enter__.return_value = mock_sock
 
         send_message_proc: SendMessageProcessor = SendMessageProcessor()
+        cli_mock_source: MagicMock = MagicMock()
+        cli_mock_source.next_message.side_effect = ["Hello World", None]
 
         client_manager: ClientManager = ClientManager(
-            mock_sock, self.conn, self.stop_event, send_message_proc
+            mock_sock, self.conn, self.stop_event, send_message_proc, cli_mock_source
         )
         self.conn.attach(client_manager)
 
         client_manager.run()
 
-        mock_sock.send_message.assert_not_called()
+        mock_sock.send_message.assert_called_once()
+        assert cli_mock_source.next_message.call_count == 2
