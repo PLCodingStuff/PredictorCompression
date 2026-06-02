@@ -5,15 +5,17 @@ from src.network.server import (
     ServerSocketConfig,
     PeerClientSocketManager,
     ServerManager,
+    ServerSocket,
 )
+from src.business.messages.message_output import CLIMessageOutput
 
 from src.business.messages.receive_message import ReceiveMessageProcessor
 
 from src.errors.server_errors import AcceptTimeOutError
 from src.network_components.connection import Connection
 
-from threading import Event
-
+from threading import Event, Thread
+import socket
 
 class TestConfig:
     port: int = 6000
@@ -105,7 +107,7 @@ class TestServerManager:
     conn: Connection = Connection()
     stop_event: Event = Event()
 
-    def test_server_manager(self):
+    def test_mock_server_manager(self):
         client_mock_sock: MagicMock = MagicMock()
 
         client_mock_sock.recv.side_effect = [
@@ -137,7 +139,7 @@ class TestServerManager:
 
         assert client_mock_sock.recv.call_count == 2
 
-    def test_server_manager_fail_accept_time_out(self):
+    def test_mock_server_manager_fail_accept_time_out(self):
         server_sock: MagicMock = MagicMock()
         server_sock.__enter__.return_value = server_sock
         server_sock.accept.side_effect = AcceptTimeOutError(3)
@@ -159,3 +161,37 @@ class TestServerManager:
         server_man.run()
 
         assert not server_man._peer_c_sock_man._sock
+
+    def echo_client(self):
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect((self.host, self.port))
+
+        client.sendall(b"hello")
+        client.sendall(b"")
+
+
+    def test_server_manager(self):
+        server_conf: ServerSocketConfig = ServerSocketConfig(self.host, self.port)
+        server_sock: ServerSocket = ServerSocket(server_conf)
+
+        msg_proc: ReceiveMessageProcessor = ReceiveMessageProcessor()
+        msg_out: CLIMessageOutput = CLIMessageOutput()
+
+        peer_client: PeerClientSocketManager = PeerClientSocketManager()
+
+        server: ServerManager = ServerManager(
+            server_sock,
+            peer_client,
+            self.conn,
+            self.stop_event,
+            msg_proc,
+            msg_out,
+        )
+
+        thread = Thread(target=server.run)
+
+        thread.start()
+
+        self.echo_client()
+
+        thread.join()
