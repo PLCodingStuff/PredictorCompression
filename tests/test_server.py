@@ -17,6 +17,7 @@ from src.network_components.connection import Connection
 from threading import Event, Thread
 import socket
 
+
 class TestConfig:
     port: int = 6000
     host: str = "127.0.0.1"
@@ -101,6 +102,90 @@ class TestPeerClientSocketManager:
             m.get_message()
 
 
+class TestServerManagerInit:
+    server_sock: MagicMock = MagicMock()
+    peer_client_socket_manager: MagicMock = MagicMock()
+    conn: MagicMock = MagicMock()
+    stop_event: MagicMock = MagicMock()
+    receive_message_proc: MagicMock = MagicMock()
+    output: MagicMock = MagicMock()
+
+    def test_server_manager_init(self):
+        assert ServerManager(
+            self.server_sock,
+            self.peer_client_socket_manager,
+            self.conn,
+            self.stop_event,
+            self.receive_message_proc,
+            self.output,
+        )
+
+    def test_server_manager_init_fail_server_sock(self):
+        with pytest.raises(ValueError):
+            ServerManager(
+                None,
+                self.peer_client_socket_manager,
+                self.conn,
+                self.stop_event,
+                self.receive_message_proc,
+                self.output,
+            )
+
+    def test_server_manager_init_fail_peer_client_socket_manager(self):
+        with pytest.raises(ValueError):
+            ServerManager(
+                self.server_sock,
+                None,
+                self.conn,
+                self.stop_event,
+                self.receive_message_proc,
+                self.output,
+            )
+
+    def test_server_manager_init_fail_connection(self):
+        with pytest.raises(ValueError):
+            ServerManager(
+                self.server_sock,
+                self.peer_client_socket_manager,
+                None,
+                self.stop_event,
+                self.receive_message_proc,
+                self.output,
+            )
+
+    def test_server_manager_init_fail_stop_event(self):
+        with pytest.raises(ValueError):
+            ServerManager(
+                self.server_sock,
+                self.peer_client_socket_manager,
+                self.conn,
+                None,
+                self.receive_message_proc,
+                self.output,
+            )
+
+    def test_server_manager_init_fail_receive_message_proc(self):
+        with pytest.raises(ValueError):
+            ServerManager(
+                self.server_sock,
+                self.peer_client_socket_manager,
+                self.conn,
+                self.stop_event,
+                None,
+                self.output,
+            )
+
+    def test_server_manager_init_fail_output(self):
+        with pytest.raises(ValueError):
+            ServerManager(
+                self.server_sock,
+                self.peer_client_socket_manager,
+                self.conn,
+                self.stop_event,
+                self.receive_message_proc,
+                None,
+            )
+
 class TestServerManager:
     host: str = "127.0.0.1"
     port: int = 6000
@@ -168,7 +253,6 @@ class TestServerManager:
 
         client.sendall(b"hello")
         client.sendall(b"")
-
 
     def test_server_manager(self):
         server_conf: ServerSocketConfig = ServerSocketConfig(self.host, self.port)

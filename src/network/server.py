@@ -153,8 +153,21 @@ class ServerManager(Observer):
         message_proc: ReceiveMessageProcessor,
         message_output: MessageOutput
     ) -> None:
-        self._sock: IServerSocket = server_sock
+        if not server_sock:
+            raise ValueError("No socket provided")
+        if not peer_client_sock_man:
+            raise ValueError("No peer socket provided")
+        if not conn:
+            raise ValueError("No connection provided")
+        if not stop_event:
+            raise ValueError("No stop event provided")
+        if not message_proc:
+            raise ValueError("No message processor provided")
+        if not message_output:
+            raise ValueError("No message output provided")
+
         self._peer_c_sock_man: PeerClientSocketManager = peer_client_sock_man
+        self._sock: IServerSocket = server_sock
         self._conn: Connection = conn
         self._stop_event = stop_event
         self._msg_proc: ReceiveMessageProcessor = message_proc
