@@ -45,6 +45,7 @@ class Node:
         are attached as observers to the connection state.
         """
         self._connection: Connection = Connection()
+        self._stop_event: threading.Event = threading.Event()
 
         self._server: ServerManager = self.__init_server(node_host, node_port)
 
@@ -61,13 +62,12 @@ class Node:
         msg_out: CLIMessageOutput = CLIMessageOutput()
 
         peer_client: PeerClientSocketManager = PeerClientSocketManager()
-        server_stop_event = threading.Event = threading.Event()
 
         return ServerManager(
             server_sock,
             peer_client,
             self._connection,
-            server_stop_event,
+            self._stop_event,
             msg_proc,
             msg_out,
         )
@@ -79,10 +79,8 @@ class Node:
         msg_proc: SendMessageProcessor = SendMessageProcessor()
         msg_source: CLIMessageSource = CLIMessageSource()
 
-        client_stop_event: threading.Event = threading.Event()
-
         return ClientManager(
-            client_sock, self._connection, client_stop_event, msg_proc, msg_source
+            client_sock, self._connection, self._stop_event, msg_proc, msg_source
         )
 
     def start_chat(self) -> None:
