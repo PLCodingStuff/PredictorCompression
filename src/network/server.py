@@ -90,11 +90,12 @@ class ServerSocket(socket):
 
 
 class PeerClientSocketManager:
-    def __init__(self, buffer_size: int = 1024):
+    def __init__(self, buffer_size: int = 1024, timeout: float = 5.0):
         if buffer_size <= 0:
             raise ValueError("Invalid Buffer Size")
 
         self._buffer_size: int = buffer_size
+        self._timeout: float = timeout
         self._sock: socket | None = None
 
     def __enter__(self) -> "PeerClientSocketManager":
@@ -117,6 +118,7 @@ class PeerClientSocketManager:
 
     def set_socket(self, sock: socket):
         self._sock = sock
+        self._sock.settimeout(self._timeout)
 
     def get_message(self) -> bytearray:
         try:
