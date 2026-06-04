@@ -255,6 +255,14 @@ class TestServerManager:
 
         client.sendall(b"hello")
         client.sendall(b"")
+        client.close()
+
+    def echo_client_sudden_disconnect(self):
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect((self.host, self.port))
+
+        client.sendall(b"hello")
+        client.close()
 
     def test_server_manager(self):
         server_conf: ServerSocketConfig = ServerSocketConfig(self.host, self.port)
@@ -280,6 +288,26 @@ class TestServerManager:
         self.echo_client()
 
 
-    @pytest.mark.skip(reason="TODO")
-    def test_server_manager_1(self):
-        ...
+    # @pytest.mark.skip(reason="TODO")
+    def test_server_manager_sudden_disconnect(self):
+        server_conf: ServerSocketConfig = ServerSocketConfig(self.host, self.port)
+        server_sock: ServerSocket = ServerSocket(server_conf, socket.AF_INET, socket.SOCK_STREAM)
+
+        msg_proc: ReceiveMessageProcessor = ReceiveMessageProcessor()
+        msg_out: CLIMessageOutput = CLIMessageOutput()
+
+        peer_client: PeerClientSocketManager = PeerClientSocketManager()
+
+        server: ServerManager = ServerManager(
+            server_sock,
+            peer_client,
+            self.conn,
+            self.stop_event,
+            msg_proc,
+            msg_out,
+        )
+
+        thread = Thread(target=server.run, daemon=True)
+        thread.start()
+
+        self.echo_client_sudden_disconnect()
