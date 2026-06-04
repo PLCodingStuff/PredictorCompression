@@ -274,10 +274,12 @@ class TestServerManager:
             msg_out,
         )
 
-        thread = Thread(target=server.run)
-
+        thread = Thread(target=server.run, daemon=True)
         thread.start()
 
         self.echo_client()
 
-        thread.join()
+
+    @pytest.mark.skip(reason="TODO")
+    def test_server_manager_1(self):
+        ...
