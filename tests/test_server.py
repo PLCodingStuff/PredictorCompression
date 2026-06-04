@@ -225,9 +225,11 @@ class TestServerManager:
         assert client_mock_sock.recv.call_count == 2
 
     def test_mock_server_manager_fail_accept_time_out(self):
+        retries: int = 3
+
         server_sock: MagicMock = MagicMock()
         server_sock.__enter__.return_value = server_sock
-        server_sock.accept.side_effect = AcceptTimeOutError(3)
+        server_sock.accept.side_effect = AcceptTimeOutError(retries)
 
         peer_client_socket_manager: PeerClientSocketManager = PeerClientSocketManager()
         receive_message_proc: ReceiveMessageProcessor = ReceiveMessageProcessor()
@@ -256,7 +258,7 @@ class TestServerManager:
 
     def test_server_manager(self):
         server_conf: ServerSocketConfig = ServerSocketConfig(self.host, self.port)
-        server_sock: ServerSocket = ServerSocket(server_conf)
+        server_sock: ServerSocket = ServerSocket(server_conf, socket.AF_INET, socket.SOCK_STREAM)
 
         msg_proc: ReceiveMessageProcessor = ReceiveMessageProcessor()
         msg_out: CLIMessageOutput = CLIMessageOutput()

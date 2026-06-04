@@ -8,7 +8,7 @@ from src.errors.server_errors import (
     CONNECTION_LOST_ERRORS,
 )
 
-from typing import Protocol
+# from typing import Protocol
 from dataclasses import dataclass
 from socket import (
     socket,
@@ -16,8 +16,8 @@ from socket import (
     SOL_SOCKET,
     SO_REUSEADDR,
     SHUT_RDWR,
-    AF_INET,
-    SOCK_STREAM,
+    # AF_INET,
+    # SOCK_STREAM,
 )
 import errno
 from threading import Event
@@ -47,25 +47,15 @@ class ServerSocketConfig:
             raise ValueError("Retries value out of range")
 
 
-class IServerSocket(Protocol):
-    def __enter__(self) -> "IServerSocket": ...
-    def __exit__(self, exc_type, exc, tb) -> bool: ...
-    def accept(self) -> socket: ...
-
-
-class ServerSocket(IServerSocket):
-    def __init__(
-        self,
-        config: ServerSocketConfig,
-    ) -> None:
-        self._sock: socket | None = None
+class ServerSocket(socket):
+    def __init__(self, config: ServerSocketConfig, *args, **kwargs) -> None:
         self._config: ServerSocketConfig = config
+        super().__init__(*args, **kwargs)
 
-    def __enter__(self) -> "IServerSocket":
+    def __enter__(self) -> "ServerSocket":
         try:
-            self._sock = socket(AF_INET, SOCK_STREAM)
-            self._sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-            self._sock.settimeout(self._config.timeout)
+            self.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+            self.settimeout(self._config.timeout)
 
             self._bind_and_listen()
             return self
@@ -82,18 +72,17 @@ class ServerSocket(IServerSocket):
         return False
 
     def _close_socket(self) -> None:
-        if self._sock:
-            self._sock.close()
-            self._sock = None
+        if self._closed:
+            self.close()
 
     def _bind_and_listen(self) -> None:
-        self._sock.bind((self._config.host, self._config.port))
-        self._sock.listen(1)
+        self.bind((self._config.host, self._config.port))
+        self.listen(1)
 
     def accept(self) -> socket:
         for _ in range(self._config.retries):
             try:
-                c_sock, _ = self._sock.accept()
+                c_sock, _ = super().accept()
                 return c_sock
             except timeout:
                 continue
@@ -146,12 +135,12 @@ class PeerClientSocketManager:
 class ServerManager(Observer):
     def __init__(
         self,
-        server_sock: IServerSocket,
+        server_sock: socket,
         peer_client_sock_man: PeerClientSocketManager,
         conn: Connection,
         stop_event: Event,
         message_proc: ReceiveMessageProcessor,
-        message_output: MessageOutput
+        message_output: MessageOutput,
     ) -> None:
         if not server_sock:
             raise ValueError("No socket provided")
@@ -167,7 +156,7 @@ class ServerManager(Observer):
             raise ValueError("No message output provided")
 
         self._peer_c_sock_man: PeerClientSocketManager = peer_client_sock_man
-        self._sock: IServerSocket = server_sock
+        self._sock: socket = server_sock
         self._conn: Connection = conn
         self._stop_event = stop_event
         self._msg_proc: ReceiveMessageProcessor = message_proc
@@ -191,6 +180,6 @@ class ServerManager(Observer):
                         msg = peer_sock.get_message()
                         processed_msg: str = self._msg_proc.parse_received(msg)
                         self._msg_out.display(processed_msg)
-                        
+
                     except ConnectionLostError:
                         self._conn.update_state()
