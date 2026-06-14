@@ -7,7 +7,7 @@ def test_decompression():
 
     test_msg: str = "Hello World"
 
-    byte_msg: bytearray = bytearray(b"\x0aHelloWorld\x04\x00")
+    byte_msg: bytearray = bytearray(b"\x00\x0aHelloWorld\x04\x00")
 
     text_message: str = decompressor.payload_decompression(byte_msg)
 

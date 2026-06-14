@@ -55,8 +55,10 @@ class Decompression:
         The leftovers are extracted from the first part of the compressed data, 
         and the bit array is derived from the remaining bytes.
         """
-        leftovers_length: int = compressed_data[0]+1
-        leftovers: list[str] = [chr(b) for b in compressed_data[1:leftovers_length]]
+        # leftovers_length: int = compressed_data[0]+1
+        leftovers_length: int = (compressed_data[0] << 8) | compressed_data[1]
+        # leftovers: list[str] = [chr(b) for b in compressed_data[1:leftovers_length]]
+        leftovers: list[str] = [chr(b) for b in compressed_data[2:2+leftovers_length]]
 
         try:
             decompressed_text: list[str] = [leftovers[i] for i in range(Decompression.k)]
@@ -64,7 +66,8 @@ class Decompression:
             decompressed_text: list[str] = [leftovers[0]]
 
         flag_bits = bitarray()
-        flag_bits.frombytes(compressed_data[leftovers_length:])
+        # flag_bits.frombytes(compressed_data[leftovers_length:])
+        flag_bits.frombytes(compressed_data[2+leftovers_length:])
         
         guess_table: list[str] = [' '] * 65536
 

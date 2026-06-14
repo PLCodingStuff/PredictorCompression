@@ -3,7 +3,6 @@ from sys import argv
 
 from src.network.node import Node
 
-
 def get_addresses(filename: str) -> tuple[str, int, str, int]:
     """
     Parse the JSON file to extract server and peer addresses and ports.

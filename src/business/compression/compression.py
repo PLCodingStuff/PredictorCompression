@@ -59,7 +59,10 @@ class Compression():
         byte_array: bytearray = bytearray(bit_array.tobytes())
         result: bytearray = bytearray()
 
-        result.append(len(leftovers))
+        # result.append(len(leftovers))
+        leftovers_count: int = len(leftovers)
+        result.append(leftovers_count >> 8)
+        result.append(leftovers_count & 0xFF)
         result.extend(ord(c) for c in leftovers)
         result.extend(byte_array)
 

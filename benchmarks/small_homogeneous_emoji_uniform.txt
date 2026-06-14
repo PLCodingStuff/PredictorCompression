@@ -1,0 +1,26 @@
+Alice: Hey Bob, how was your day? :)
+Bob: Pretty good thanks :) How about yours?
+Alice: Not bad. Had a busy morning but it calmed down later :|
+Bob: Same here. Had a lot of emails to get through :/
+Alice: Ugh emails :( I had a pile of those too.
+Bob: Did you manage to clear them all out?
+Alice: Most of them :) A few can wait until tomorrow.
+Bob: Sounds like a plan :) Did you have lunch?
+Alice: Yeah, made a sandwich at home. Nothing special :|
+Bob: I grabbed something from that place near the office :)
+Alice: Oh nice, was it good? :D
+Bob: Pretty decent :) A bit pricey though :/
+Alice: Haha :P The good spots always charge more.
+Bob: True :| Anyway, how is the family doing?
+Alice: Everyone is well :D The kids had school today.
+Bob: Oh right, how are they getting on?
+Alice: Really well :D My daughter got a good mark on her test.
+Bob: That is great to hear :D You must be proud.
+Alice: I really am :) She worked so hard for it.
+Bob: It shows when they put in the effort :)
+Alice: It does :) Any plans for tonight?
+Bob: Not really. Probably just a quiet evening at home :|
+Alice: That sounds nice :) Might do the same.
+Bob: Sometimes you just need a slow night :)
+Alice: Exactly :) Alright, take care Bob.
+Bob: You too Alice :) Talk soon.
