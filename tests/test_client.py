@@ -76,3 +76,7 @@ class TestClientManager:
 
         mock_sock.send_message.assert_called_once()
         assert cli_mock_source.next_message.call_count == 2
+
+    @pytest.mark.skip(reason="TODO")
+    def test_client_echo(self):
+        ...
