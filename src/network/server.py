@@ -70,7 +70,7 @@ class ServerSocket(socket):
         return False
 
     def _close_socket(self) -> None:
-        if self._closed:
+        if not self._closed:
             self.close()
 
     def _bind_and_listen(self) -> None:

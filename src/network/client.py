@@ -4,10 +4,9 @@ from src.business.messages.message_source import MessageSource
 from src.interfaces.observer import Observer
 from src.errors.client_errors import ConnectTimeOutError
 
-from typing import Protocol
 from dataclasses import dataclass
 from threading import Event
-from socket import socket, SHUT_RDWR, AF_INET, SOCK_STREAM, timeout
+from socket import socket, SHUT_RDWR, timeout
 from ipaddress import ip_address
 
 
@@ -34,23 +33,17 @@ class ClientSocketConfig:
             raise ValueError("Invalid timeout")
 
 
-class IClientSocket(Protocol):
-    def __enter__(self) -> "IClientSocket": ...
-    def __exit__(self, exc_type, exc, tb) -> bool: ...
-    def send_message(self, msg: bytearray) -> None: ...
-
-
-class ClientSocket(IClientSocket):
-    def __init__(self, config: ClientSocketConfig):
+class ClientSocket(socket):
+    def __init__(self, config: ClientSocketConfig, *args, **kwargs) -> None:
         self._config = config
+        super().__init__(*args, **kwargs)
 
-    def __enter__(self) -> "IClientSocket":
-        self._sock = socket(AF_INET, SOCK_STREAM)
-        self._sock.settimeout(self._config.timeout)
+    def __enter__(self) -> "ClientSocket":
 
+        self.settimeout(self._config.timeout)
         for _ in range(self._config.retries):
             try:
-                self._sock.connect((self._config.peer_host, self._config.peer_port))
+                self.connect((self._config.peer_host, self._config.peer_port))
                 return self
             except timeout:
                 pass
@@ -62,28 +55,27 @@ class ClientSocket(IClientSocket):
         return False
 
     def _close_socket(self):
-        if self._sock is not None:
+        if not self._closed:
             try:
-                self._sock.shutdown(SHUT_RDWR)
+                self.shutdown(SHUT_RDWR)
             except OSError:
                 pass
-            self._sock.close()
-            self._sock = None
+            self.close()
 
     def send_message(self, msg: bytearray):
-        self._sock.sendall(msg)
+        self.sendall(msg)
 
 
 class ClientManager(Observer):
     def __init__(
         self,
-        socket: IClientSocket,
+        socket: ClientSocket,
         conn: Connection,
         stop_event: Event,
         message_proc: SendMessageProcessor,
         message_source: MessageSource,
     ) -> None:
-        self._sock: IClientSocket = socket
+        self._sock: ClientSocket = socket
         self._conn: Connection = conn
         self._stop_event: Event = stop_event
         self._message_proc: SendMessageProcessor = message_proc

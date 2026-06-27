@@ -57,7 +57,9 @@ class Node:
 
     def __init_server(self, host: str, port: int) -> ServerManager:
         server_conf: ServerSocketConfig = ServerSocketConfig(host, port)
-        server_sock: ServerSocket = ServerSocket(server_conf, family=AF_INET, type=SOCK_STREAM)
+        server_sock: ServerSocket = ServerSocket(
+            server_conf, family=AF_INET, type=SOCK_STREAM
+        )
 
         msg_proc: ReceiveMessageProcessor = ReceiveMessageProcessor()
         msg_out: CLIMessageOutput = CLIMessageOutput()
@@ -75,7 +77,9 @@ class Node:
 
     def __init_client(self, host, port) -> ClientManager:
         client_conf: ClientSocketConfig = ClientSocketConfig(host, port)
-        client_sock: ClientSocket = ClientSocket(client_conf)
+        client_sock: ClientSocket = ClientSocket(
+            client_conf, family=AF_INET, type=SOCK_STREAM
+        )
 
         msg_proc: SendMessageProcessor = SendMessageProcessor()
         msg_source: CLIMessageSource = CLIMessageSource()
