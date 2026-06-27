@@ -12,6 +12,7 @@ from src.business.messages.message_source import CLIMessageSource
 from src.business.messages.message_output import CLIMessageOutput
 
 import threading
+from socket import AF_INET, SOCK_STREAM
 
 
 class Node:
@@ -56,7 +57,7 @@ class Node:
 
     def __init_server(self, host: str, port: int) -> ServerManager:
         server_conf: ServerSocketConfig = ServerSocketConfig(host, port)
-        server_sock: ServerSocket = ServerSocket(server_conf)
+        server_sock: ServerSocket = ServerSocket(server_conf, family=AF_INET, type=SOCK_STREAM)
 
         msg_proc: ReceiveMessageProcessor = ReceiveMessageProcessor()
         msg_out: CLIMessageOutput = CLIMessageOutput()

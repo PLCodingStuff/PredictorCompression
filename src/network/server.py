@@ -8,7 +8,7 @@ from src.errors.server_errors import (
     CONNECTION_LOST_ERRORS,
 )
 
-# from typing import Protocol
+
 from dataclasses import dataclass
 from socket import (
     socket,
@@ -16,8 +16,6 @@ from socket import (
     SOL_SOCKET,
     SO_REUSEADDR,
     SHUT_RDWR,
-    # AF_INET,
-    # SOCK_STREAM,
 )
 import errno
 from threading import Event
