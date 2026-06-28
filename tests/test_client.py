@@ -65,7 +65,7 @@ class TestClientManager:
             server.bind((self.host, self.port))
             server.listen(1)
 
-            conn, _ = server.accept()
+            conn, addr = server.accept()
 
             with conn:
                 while True:
@@ -94,9 +94,6 @@ class TestClientManager:
 
     # @pytest.mark.skip(reason="TODO")
     def test_client_echo(self):
-        thread = Thread(target=self.echo_server, daemon=True)
-        thread.run()
-
         config: ClientSocketConfig = ClientSocketConfig(self.host, self.port)
 
         sock: ClientSocket = ClientSocket(config, family=AF_INET, type=SOCK_STREAM)
@@ -106,10 +103,9 @@ class TestClientManager:
         cli_mock_source: MagicMock = MagicMock()
         cli_mock_source.next_message.side_effect = ["Hello World", None]
 
-
         client: ClientManager = ClientManager(sock, self.conn, self.stop_event, msg_proc, cli_mock_source)
 
+        thread = Thread(target=self.echo_server, daemon=True)
+        thread.start()
 
         client.run()
-
-        
