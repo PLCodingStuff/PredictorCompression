@@ -92,7 +92,6 @@ class TestClientManager:
         mock_sock.send_message.assert_called_once()
         assert cli_mock_source.next_message.call_count == 2
 
-    # @pytest.mark.skip(reason="TODO")
     def test_client_echo(self):
         config: ClientSocketConfig = ClientSocketConfig(self.host, self.port)
 
@@ -103,7 +102,9 @@ class TestClientManager:
         cli_mock_source: MagicMock = MagicMock()
         cli_mock_source.next_message.side_effect = ["Hello World", None]
 
-        client: ClientManager = ClientManager(sock, self.conn, self.stop_event, msg_proc, cli_mock_source)
+        client: ClientManager = ClientManager(
+            sock, self.conn, self.stop_event, msg_proc, cli_mock_source
+        )
 
         thread = Thread(target=self.echo_server, daemon=True)
         thread.start()
