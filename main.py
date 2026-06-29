@@ -1,10 +1,12 @@
-from sys import argv
+# from sys import argv
 
-from src.network.node import Node
-from src.network.server import ServerSocketConfig
-from src.network.client import ClientSocketConfig
-from src.config.config import create_client_config, create_server_config
+# from src.network.node import Node
+# from src.network.server import ServerSocketConfig
+# from src.network.client import ClientSocketConfig
+# from src.config.config import create_client_config, create_server_config
+from src.cli.commands import build_parser
 
+import sys
 
 def main():
     """
@@ -14,24 +16,32 @@ def main():
 
     If an error occurs during loading of the JSON file or if the provided arguments are invalid, an error message is printed and the program terminates.
     """
-    try:
-        if len(argv) != 2:
-            raise ValueError("Invalid number of command line arguments")
+    # try:
+    #     if len(argv) != 2:
+    #         raise ValueError("Invalid number of command line arguments")
 
-        json_file = argv[1]
-        server_conf: ServerSocketConfig = create_server_config(json_file)
-        client_conf: ClientSocketConfig = create_client_config(json_file)
-    except ValueError as e:
-        print(f"Error while loading: {str(e)}")
-        print("Terminating Process")
-        return
-    except FileNotFoundError as e:
-        print(f"Error while loading: {str(e)}")
-        print("Terminating Process")
-        return
+    #     json_file = argv[1]
+    #     server_conf: ServerSocketConfig = create_server_config(json_file)
+    #     client_conf: ClientSocketConfig = create_client_config(json_file)
+    # except ValueError as e:
+    #     print(f"Error while loading: {str(e)}")
+    #     print("Terminating Process")
+    #     return
+    # except FileNotFoundError as e:
+    #     print(f"Error while loading: {str(e)}")
+    #     print("Terminating Process")
+    #     return
 
-    node = Node(server_conf, client_conf)
-    node.start_chat()
+    # node = Node(server_conf, client_conf)
+    # node.start_chat()
+    p2ppred = build_parser()
+    args = p2ppred.parse_args()
+
+    if not hasattr(args, 'func'):
+        p2ppred.print_help()
+        sys.exit(0)
+
+    args.func(args)
 
 
 if __name__ == "__main__":
