@@ -1,7 +1,9 @@
 from sys import argv
 
 from src.network.node import Node
-from src.config.config import read_config_json
+from src.network.server import ServerSocketConfig
+from src.network.client import ClientSocketConfig
+from src.config.config import create_client_config, create_server_config
 
 
 def main():
@@ -17,7 +19,8 @@ def main():
             raise ValueError("Invalid number of command line arguments")
 
         json_file = argv[1]
-        host, port, peer_host, peer_port = read_config_json(json_file)
+        server_conf: ServerSocketConfig = create_server_config(json_file)
+        client_conf: ClientSocketConfig = create_client_config(json_file)
     except ValueError as e:
         print(f"Error while loading: {str(e)}")
         print("Terminating Process")
@@ -27,7 +30,7 @@ def main():
         print("Terminating Process")
         return
 
-    node = Node(host, port, peer_host, peer_port)
+    node = Node(server_conf, client_conf)
     node.start_chat()
 
 

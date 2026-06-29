@@ -31,7 +31,7 @@ class Node:
     """
 
     def __init__(
-        self, node_host: str, node_port: int, peer_host: str, peer_port: int
+        self, server_config: ServerSocketConfig, client_config: ClientSocketConfig
     ) -> None:
         """
         Initialize the Node with the addresses and ports for both the server and client.
@@ -48,17 +48,16 @@ class Node:
         self._connection: Connection = Connection()
         self._stop_event: threading.Event = threading.Event()
 
-        self._server: ServerManager = self.__init_server(node_host, node_port)
+        self._server: ServerManager = self.__init_server(server_config)
 
-        self._client: ClientManager = self.__init_client(peer_host, peer_port)
+        self._client: ClientManager = self.__init_client(client_config)
 
         self._connection.attach(self._server)
         self._connection.attach(self._client)
 
-    def __init_server(self, host: str, port: int) -> ServerManager:
-        server_conf: ServerSocketConfig = ServerSocketConfig(host, port)
+    def __init_server(self, config: ServerSocketConfig) -> ServerManager:
         server_sock: ServerSocket = ServerSocket(
-            server_conf, family=AF_INET, type=SOCK_STREAM
+            config, family=AF_INET, type=SOCK_STREAM
         )
 
         msg_proc: ReceiveMessageProcessor = ReceiveMessageProcessor()
@@ -75,10 +74,9 @@ class Node:
             msg_out,
         )
 
-    def __init_client(self, host, port) -> ClientManager:
-        client_conf: ClientSocketConfig = ClientSocketConfig(host, port)
+    def __init_client(self, config: ClientSocketConfig) -> ClientManager:
         client_sock: ClientSocket = ClientSocket(
-            client_conf, family=AF_INET, type=SOCK_STREAM
+            config, family=AF_INET, type=SOCK_STREAM
         )
 
         msg_proc: SendMessageProcessor = SendMessageProcessor()
