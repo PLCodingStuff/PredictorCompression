@@ -1,7 +1,7 @@
 from sys import argv
 
 from src.network.node import Node
-from src.config.config import get_addresses
+from src.config.config import read_config_json
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
             raise ValueError("Invalid number of command line arguments")
 
         json_file = argv[1]
-        host, port, peer_host, peer_port = get_addresses(json_file)
+        host, port, peer_host, peer_port = read_config_json(json_file)
     except ValueError as e:
         print(f"Error while loading: {str(e)}")
         print("Terminating Process")
