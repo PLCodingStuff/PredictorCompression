@@ -1,10 +1,9 @@
-from src.config.config import read_config_json
-
 import sys
 from argparse import ArgumentParser
 
 
 def cmd_validate(args):
+    from src.config.config import read_config_json
     try:
         config: dict = read_config_json(args.file)
         print("✓ Config is valid")
@@ -15,6 +14,24 @@ def cmd_validate(args):
         print(f"✗ Config is invalid: {e}", file=sys.stderr)
         sys.exit(1)
 
+def cmd_compress(args):
+    """Compress text"""
+    from src.business.compression.compression import Compression
+
+    try:
+        comp = Compression()
+        compressed = comp.payload_compression(args.text)
+
+        if args.output:
+            with open(args.output, 'wb') as f:
+                f.write(compressed)
+            print(f"✓ Compressed and saved to {args.output}")
+        else:
+            print(compressed.hex())
+
+    except Exception as e:
+        print(f"Compression failed: {e}", file=sys.stderr)
+        sys.exit(1)
 
 def add_validate_subparser(subparser):
     validate = subparser.add_parser(name="validate", help="Validate configuration file")
