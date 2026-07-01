@@ -36,6 +36,20 @@ def cmd_compress(args):
         sys.exit(1)
 
 
+def cmd_decompress(args):
+    """Decompress data (hex string)"""
+    from src.business.compression.decompression import Decompression
+
+    try:
+        decompressed_bytes = bytes.fromhex(args.data)
+        decomp = Decompression()
+        result = decomp.payload_decompression(decompressed_bytes)
+        print(result)
+    except Exception as e:
+        print(f"Decompression failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 def add_validate_subparser(subparsers):
     validate = subparsers.add_parser(
         name="validate", help="Validate configuration file"
