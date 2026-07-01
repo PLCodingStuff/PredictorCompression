@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 
 def cmd_validate(args):
     from src.config.config import read_config_json
+
     try:
         config: dict = read_config_json(args.file)
         print("✓ Config is valid")
@@ -14,6 +15,7 @@ def cmd_validate(args):
         print(f"✗ Config is invalid: {e}", file=sys.stderr)
         sys.exit(1)
 
+
 def cmd_compress(args):
     """Compress text"""
     from src.business.compression.compression import Compression
@@ -23,7 +25,7 @@ def cmd_compress(args):
         compressed = comp.payload_compression(args.text)
 
         if args.output:
-            with open(args.output, 'wb') as f:
+            with open(args.output, "wb") as f:
                 f.write(compressed)
             print(f"✓ Compressed and saved to {args.output}")
         else:
@@ -33,12 +35,24 @@ def cmd_compress(args):
         print(f"Compression failed: {e}", file=sys.stderr)
         sys.exit(1)
 
-def add_validate_subparser(subparser):
-    validate = subparser.add_parser(name="validate", help="Validate configuration file")
+
+def add_validate_subparser(subparsers):
+    validate = subparsers.add_parser(
+        name="validate", help="Validate configuration file"
+    )
 
     validate.add_argument("file", type=str, help="Path to configuration JSON file")
 
     validate.set_defaults(func=cmd_validate)
+
+
+def add_compress_subparser(subparsers):
+    compress_parser = subparsers.add_parser("compress", help="Compress text")
+    compress_parser.add_argument("text", type=str, help="Text to compress")
+    compress_parser.add_argument(
+        "-o", "--output", type=str, help="Save compressed data to file"
+    )
+    compress_parser.set_defaults(func=cmd_compress)
 
 
 def build_parser() -> ArgumentParser:
@@ -62,5 +76,6 @@ def build_parser() -> ArgumentParser:
     )
 
     add_validate_subparser(p2ppred_subparsers)
+    add_compress_subparser(p2ppred_subparsers)
 
     return p2ppred
