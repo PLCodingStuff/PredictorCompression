@@ -68,6 +68,17 @@ def add_compress_subparser(subparsers):
     )
     compress_parser.set_defaults(func=cmd_compress)
 
+def add_decompress_subparser(subparsers):
+    decompress_parser = subparsers.add_parser(
+        'decompress',
+        help='Decompress data (hex string)'
+    )
+    decompress_parser.add_argument(
+        'data',
+        type=str,
+        help='Hex-encoded data to decompress'
+    )
+    decompress_parser.set_defaults(func=cmd_decompress)
 
 def build_parser() -> ArgumentParser:
     p2ppred: ArgumentParser = ArgumentParser(
@@ -91,5 +102,6 @@ def build_parser() -> ArgumentParser:
 
     add_validate_subparser(p2ppred_subparsers)
     add_compress_subparser(p2ppred_subparsers)
+    add_decompress_subparser(p2ppred_subparsers)
 
     return p2ppred
