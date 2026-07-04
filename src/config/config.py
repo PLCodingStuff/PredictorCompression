@@ -29,7 +29,7 @@ def create_server_config(filename: str) -> ServerSocketConfig:
     config: dict = read_config_json(filename)
 
     return ServerSocketConfig(
-        config["address"], config["port"], config["retries"], config["timeout"]
+        config["address"], config["port"], config["timeout"], config["retries"]
     )
 
 
