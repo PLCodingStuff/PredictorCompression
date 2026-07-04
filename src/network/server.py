@@ -78,7 +78,7 @@ class ServerSocket(socket):
         self.listen(1)
 
     def accept(self) -> socket:
-        for _ in range(self._config.retries):
+        for _ in range(int(self._config.retries)):
             try:
                 c_sock, _ = super().accept()
                 return c_sock
