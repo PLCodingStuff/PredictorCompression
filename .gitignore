@@ -141,3 +141,7 @@ $RECYCLE.BIN/
 
 _NCrunch*
 demo/*
+
+.venv/
+.pytest_cache/
+.ruff_cache/
