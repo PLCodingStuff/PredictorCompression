@@ -16,7 +16,7 @@ def read_config_json(filename: str) -> dict:
     if "timeout" not in config:
         config["timeout"] = 5.0
 
-    if "retires" not in config:
+    if "retries" not in config:
         config["retries"] = 3
 
     if "address" not in config:
