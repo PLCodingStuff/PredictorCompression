@@ -145,5 +145,3 @@ demo/*
 .venv/
 .pytest_cache/
 .ruff_cache/
-
-REPORT.md
