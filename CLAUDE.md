@@ -18,7 +18,7 @@ Python 3.11, dependency management via `uv` (see `uv.lock`, `pyproject.toml`). `
   - `py main.py validate <config.json>` — validate a config file
   - `py main.py compress "text"` — compress text, prints hex (or `-o file` to write raw bytes)
   - `py main.py decompress <hex>` — decompress a hex string back to text
-  - `py main.py start <server_config.json> <client_config.json>` — start a two-way chat node (unfinished/untested — see `cmd_start` in `src/cli/commands.py`)
+  - `py main.py start <server_config.json> <client_config.json>` — start a two-way chat node; needs a second `start` process (with swapped server/client configs) as its peer to connect to
 
 CI (`.github/workflows/python-app.yml`) runs on `windows-latest` for pushes/PRs to `main`: installs `requirements.txt`, then runs `ruff check .` followed by `pytest`.
 
@@ -42,7 +42,7 @@ CI (`.github/workflows/python-app.yml`) runs on `windows-latest` for pushes/PRs 
 
 ### Config loading
 
-`src/config/config.py`'s `read_config_json` loads a node's JSON config (`address`/`port` required; `timeout`, `retries`, `address` default if absent — note the `"retires"` vs `"retries"` key typo means the default retry-count branch never actually triggers off a present key), then `create_server_config`/`create_client_config` build the corresponding `ServerSocketConfig`/`ClientSocketConfig` dataclasses (which do their own validation in `__post_init__`). `node1config.json`/`node2config.json` at the repo root are example paired configs for running two local nodes against each other.
+`src/config/config.py`'s `read_config_json` loads a node's JSON config (`port` required; `timeout`, `retries`, `address` default if absent), then `create_server_config`/`create_client_config` build the corresponding `ServerSocketConfig`/`ClientSocketConfig` dataclasses (which do their own validation in `__post_init__`). Note `create_client_config` reads the same `port`/`address` keys as the server config but binds them to `ClientSocketConfig.peer_port`/`peer_host` — i.e. for a client config file, `port` must hold the *peer's* port, not this node's own port. `node1config.json`/`node2config.json` at the repo root are example paired configs for running two local nodes against each other.
 
 ### Tests
 
@@ -51,6 +51,6 @@ CI (`.github/workflows/python-app.yml`) runs on `windows-latest` for pushes/PRs 
 ## Notes
 
 - `main.py` still contains a large commented-out block of an older, non-CLI entry point (direct `Node(server_conf, client_conf)` construction) — the live path is `build_parser()` from `src/cli/commands.py`.
-- The `start` CLI subcommand (`cmd_start`) is marked untested in recent commit history; don't assume the full node-to-node chat flow works end-to-end without checking.
+- `Node.start_chat()` starts the server in a background thread and immediately runs the client on the calling thread with no barrier — if the peer's server hasn't called `listen()` yet, connecting is a race against the client's retry/timeout config, not a guaranteed rendezvous.
 - `demo/` is a scratch area exploring CLI framework choices (argparse vs click vs typer) and is unrelated to the production CLI in `src/cli/commands.py`.
 - `requirements.txt` (what CI installs) pins `bitarray==2.9.2`, while `pyproject.toml`/`uv.lock` (what `uv run` uses locally) specify `bitarray>=3.8.0` (locked to `3.8.0`) — CI and local dev can end up exercising different `bitarray` versions.

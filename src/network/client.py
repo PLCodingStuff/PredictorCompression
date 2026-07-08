@@ -23,7 +23,7 @@ class ClientSocketConfig:
         except ValueError:
             raise ValueError("Invalid host address")
 
-        if self.peer_port <= 0 or self.peer_port > 65355:
+        if self.peer_port <= 0 or self.peer_port > 65535:
             raise ValueError("Invalid port number")
 
         if self.retries < 0:
