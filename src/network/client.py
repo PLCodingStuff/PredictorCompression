@@ -98,8 +98,8 @@ class ClientManager(Observer):
                         self._conn.update_state()
                         continue
                     
-                    self._message_proc.prepare_to_send(msg)
-                    sock.send_message(msg)
+                    processed_msg: bytearray = self._message_proc.prepare_to_send(msg)
+                    sock.send_message(processed_msg)
 
         except ConnectTimeOutError:
             return
