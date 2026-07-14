@@ -13,10 +13,34 @@ from src.business.messages.receive_message import ReceiveMessageProcessor
 
 from src.errors.server_errors import AcceptTimeOutError
 from src.network_components.connection import Connection
+from src.network_components.framing import (
+    MessageType,
+    pack_frame,
+    send_frame as _send_frame,
+    recv_frame as _recv_frame,
+)
+from src.business.compression.compression import Compression
 
 from threading import Event, Thread
 import socket
 from time import sleep
+
+
+def _recv_stream(*frames: bytes):
+    """Builds a MagicMock-compatible recv() side effect that honors the requested
+    byte count, regardless of how the frames were chunked when constructed."""
+    buf = bytearray()
+    for f in frames:
+        buf.extend(f)
+
+    def _recv(n: int) -> bytes:
+        if not buf:
+            return b""
+        chunk = bytes(buf[:n])
+        del buf[:n]
+        return chunk
+
+    return _recv
 
 
 class TestConfig:
@@ -77,20 +101,23 @@ class TestPeerClientSocketManager:
         with pytest.raises(ValueError, match="Invalid Buffer Size"):
             PeerClientSocketManager(buffer_size=buffer_size)
 
-    def test_peer_client_socket_manager_get_message(self):
+    def test_peer_client_socket_manager_recv_frame(self):
         manager: PeerClientSocketManager = PeerClientSocketManager()
 
+        payload = bytearray("Hello World", encoding="ASCII")
         mock_sock: MagicMock = MagicMock()
-        mock_sock.recv.return_value = bytearray("Hello World", encoding="ASCII")
+        mock_sock.recv.side_effect = _recv_stream(pack_frame(MessageType.MSG, payload))
 
         manager.set_socket(mock_sock)
-        msg: bytearray = None
+        msg_type: MessageType = None
+        received_payload: bytearray = None
         with manager as m:
-            msg = m.get_message()
+            msg_type, received_payload = m.recv_frame()
 
-        assert msg == bytearray("Hello World", encoding="ASCII")
+        assert msg_type == MessageType.MSG
+        assert received_payload == payload
 
-    def test_peer_client_socket_manager_get_message_fail(self):
+    def test_peer_client_socket_manager_recv_frame_fail(self):
         manager: PeerClientSocketManager = PeerClientSocketManager()
 
         mock_sock: MagicMock = MagicMock()
@@ -100,7 +127,7 @@ class TestPeerClientSocketManager:
 
         # Gracefully fails
         with manager as m:
-            m.get_message()
+            m.recv_frame()
 
 
 class TestServerManagerInit:
@@ -196,10 +223,12 @@ class TestServerManager:
     def test_mock_server_manager(self):
         client_mock_sock: MagicMock = MagicMock()
 
-        client_mock_sock.recv.side_effect = [
-            bytearray("Hello World", encoding="ASCII"),
-            bytearray(),
-        ]
+        compressed: bytearray = Compression().payload_compression("Hello World")
+        client_mock_sock.recv.side_effect = _recv_stream(
+            pack_frame(MessageType.HELLO),
+            pack_frame(MessageType.ACK),
+            pack_frame(MessageType.MSG, compressed),
+        )
 
         server_sock: MagicMock = MagicMock()
         server_sock.__enter__.return_value = server_sock
@@ -223,7 +252,72 @@ class TestServerManager:
 
         server_man.run()
 
-        assert client_mock_sock.recv.call_count == 2
+        output_mock.display.assert_called_once_with("Hello World")
+
+    def test_server_manager_receives_quit(self):
+        conn: Connection = Connection()
+        stop_event: Event = Event()
+
+        client_mock_sock: MagicMock = MagicMock()
+        client_mock_sock.recv.side_effect = _recv_stream(
+            pack_frame(MessageType.HELLO),
+            pack_frame(MessageType.ACK),
+            pack_frame(MessageType.QUIT),
+        )
+
+        server_sock: MagicMock = MagicMock()
+        server_sock.__enter__.return_value = server_sock
+        server_sock.accept.return_value = client_mock_sock
+
+        output_mock: MagicMock = MagicMock()
+
+        peer_client_socket_manager: PeerClientSocketManager = PeerClientSocketManager()
+        receive_message_proc: ReceiveMessageProcessor = ReceiveMessageProcessor()
+
+        server_man: ServerManager = ServerManager(
+            server_sock,
+            peer_client_socket_manager,
+            conn,
+            stop_event,
+            receive_message_proc,
+            output_mock,
+        )
+        conn.attach(server_man)
+
+        server_man.run()
+
+        output_mock.display.assert_called_once_with("Peer has left the chat.")
+        assert stop_event.is_set()
+
+    def test_server_manager_handshake_failure(self):
+        conn: Connection = Connection()
+        stop_event: Event = Event()
+
+        client_mock_sock: MagicMock = MagicMock()
+        client_mock_sock.recv.side_effect = _recv_stream(b"garbage, not a valid frame")
+
+        server_sock: MagicMock = MagicMock()
+        server_sock.__enter__.return_value = server_sock
+        server_sock.accept.return_value = client_mock_sock
+
+        output_mock: MagicMock = MagicMock()
+
+        peer_client_socket_manager: PeerClientSocketManager = PeerClientSocketManager()
+        receive_message_proc: ReceiveMessageProcessor = ReceiveMessageProcessor()
+
+        server_man: ServerManager = ServerManager(
+            server_sock,
+            peer_client_socket_manager,
+            conn,
+            stop_event,
+            receive_message_proc,
+            output_mock,
+        )
+
+        server_man.run()
+
+        output_mock.display.assert_not_called()
+        assert server_man._peer_c_sock_man._sock is None
 
     def test_mock_server_manager_fail_accept_time_out(self):
         retries: int = 3
@@ -250,19 +344,27 @@ class TestServerManager:
 
         assert not server_man._peer_c_sock_man._sock
 
+    def _client_handshake(self, client: socket.socket) -> None:
+        _send_frame(client, MessageType.HELLO)
+        _recv_frame(client)
+        _send_frame(client, MessageType.ACK)
+        _recv_frame(client)
+
     def echo_client(self):
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((self.host, self.port))
 
-        client.sendall(b"hello")
-        client.sendall(b"")
+        self._client_handshake(client)
+        _send_frame(client, MessageType.MSG, Compression().payload_compression("hello"))
+        _send_frame(client, MessageType.QUIT)
         client.close()
 
     def echo_client_sudden_disconnect(self):
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((self.host, self.port))
 
-        client.sendall(b"hello")
+        self._client_handshake(client)
+        _send_frame(client, MessageType.MSG, Compression().payload_compression("hello"))
         client.close()
 
     def echo_client_delay(self):
@@ -270,9 +372,10 @@ class TestServerManager:
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((self.host, self.port))
 
-        client.sendall(b"hello")
+        self._client_handshake(client)
+        _send_frame(client, MessageType.MSG, Compression().payload_compression("hello"))
         sleep(delay)
-        client.sendall(b"")
+        _send_frame(client, MessageType.QUIT)
         client.close()
 
     def test_server_manager(self):
@@ -287,8 +390,8 @@ class TestServerManager:
         server: ServerManager = ServerManager(
             server_sock,
             peer_client,
-            self.conn,
-            self.stop_event,
+            Connection(),
+            Event(),
             msg_proc,
             msg_out,
         )
@@ -311,8 +414,8 @@ class TestServerManager:
         server: ServerManager = ServerManager(
             server_sock,
             peer_client,
-            self.conn,
-            self.stop_event,
+            Connection(),
+            Event(),
             msg_proc,
             msg_out,
         )
@@ -335,8 +438,8 @@ class TestServerManager:
         server: ServerManager = ServerManager(
             server_sock,
             peer_client,
-            self.conn,
-            self.stop_event,
+            Connection(),
+            Event(),
             msg_proc,
             msg_out,
         )

@@ -1,13 +1,18 @@
 from src.network_components.connection import Connection
+from src.network_components.framing import MessageType, send_frame, recv_frame
+from src.network_components.handshake import perform_handshake
 from src.business.messages.send_message import SendMessageProcessor
 from src.business.messages.message_source import MessageSource
 from src.interfaces.observer import Observer
 from src.errors.client_errors import ConnectTimeOutError
+from src.errors.protocol_errors import HandshakeError
+from src.errors.server_errors import ConnectionLostError
 
 from dataclasses import dataclass
 from threading import Event
 from socket import socket, SHUT_RDWR, timeout
 from ipaddress import ip_address
+import sys
 
 
 @dataclass
@@ -62,8 +67,14 @@ class ClientSocket(socket):
                 pass
             self.close()
 
+    def send_frame(self, msg_type: MessageType, payload: bytes = b"") -> None:
+        send_frame(self, msg_type, payload)
+
+    def recv_frame(self) -> tuple[MessageType, bytearray]:
+        return recv_frame(self)
+
     def send_message(self, msg: bytearray):
-        self.sendall(msg)
+        self.send_frame(MessageType.MSG, msg)
 
 
 class ClientManager(Observer):
@@ -88,16 +99,26 @@ class ClientManager(Observer):
     def run(self):
         try:
             with self._sock as sock:
+                try:
+                    perform_handshake(sock)
+                except HandshakeError as e:
+                    print(f"Handshake failed: {e}", file=sys.stderr)
+                    return
+
                 self._conn.update_state()
 
                 msg: str = ""
                 while not self._stop_event.is_set():
                     msg: str | None = self._message_source.next_message()
-                    
+
                     if not msg:
+                        try:
+                            sock.send_frame(MessageType.QUIT)
+                        except (ConnectionLostError, OSError):
+                            pass
                         self._conn.update_state()
-                        continue
-                    
+                        break
+
                     processed_msg: bytearray = self._message_proc.prepare_to_send(msg)
                     sock.send_message(processed_msg)
 

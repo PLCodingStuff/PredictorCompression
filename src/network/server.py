@@ -2,11 +2,13 @@ from src.interfaces.observer import Observer
 from src.business.messages.receive_message import ReceiveMessageProcessor
 from src.business.messages.message_output import MessageOutput
 from src.network_components.connection import Connection
+from src.network_components.framing import MessageType, send_frame, recv_frame
+from src.network_components.handshake import perform_handshake
 from src.errors.server_errors import (
     ConnectionLostError,
     AcceptTimeOutError,
-    CONNECTION_LOST_ERRORS,
 )
+from src.errors.protocol_errors import HandshakeError
 
 
 from dataclasses import dataclass
@@ -101,7 +103,7 @@ class PeerClientSocketManager:
 
     def __exit__(self, exc_type, exc, tb) -> bool:
         self._close_socket()
-        if exc_type == ConnectionLostError:
+        if exc_type in (ConnectionLostError, HandshakeError):
             return True
         return False
 
@@ -118,18 +120,11 @@ class PeerClientSocketManager:
         self._sock = sock
         self._sock.settimeout(self._timeout)
 
-    def get_message(self) -> bytearray:
-        try:
-            message: bytearray = self._sock.recv(self._buffer_size)
+    def send_frame(self, msg_type: MessageType, payload: bytes = b"") -> None:
+        send_frame(self._sock, msg_type, payload)
 
-            if not message:
-                raise ConnectionLostError("Peer disconnected gracefully.")
-
-            return message
-        except OSError as e:
-            if e.errno in CONNECTION_LOST_ERRORS:
-                raise ConnectionLostError(str(e))
-            raise
+    def recv_frame(self) -> tuple[MessageType, bytearray]:
+        return recv_frame(self._sock)
 
 
 class ServerManager(Observer):
@@ -173,13 +168,29 @@ class ServerManager(Observer):
             except AcceptTimeOutError:
                 return
 
-            self._conn.update_state()
             with self._peer_c_sock_man as peer_sock:
+                try:
+                    perform_handshake(peer_sock)
+                except HandshakeError:
+                    return
+
+                self._conn.update_state()
                 while not self._stop_event.is_set():
                     try:
-                        msg = peer_sock.get_message()
-                        processed_msg: str = self._msg_proc.parse_received(msg)
-                        self._msg_out.display(processed_msg)
-
+                        msg_type, payload = peer_sock.recv_frame()
                     except ConnectionLostError:
                         self._conn.update_state()
+                        break
+                    except timeout:
+                        continue
+
+                    if msg_type == MessageType.MSG:
+                        processed_msg: str = self._msg_proc.parse_received(payload)
+                        self._msg_out.display(processed_msg)
+                    elif msg_type == MessageType.QUIT:
+                        self._msg_out.display("Peer has left the chat.")
+                        self._conn.update_state()
+                    else:
+                        self._msg_out.display(
+                            f"Ignored unexpected control frame: {msg_type.name}"
+                        )
