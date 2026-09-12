@@ -70,12 +70,12 @@ class Connection(Observable):
         """
         return self._state
 
-    def update_state(self)->None:
+    def update_state(self, value: bool)->None:
         """
         Toggle the state of the connection and notify observers.
 
         This method inverts the current state (from True to False or vice versa) 
         and triggers the `_notify` method to inform all observers of the state change.
         """
-        self._state = not self._state
+        self._state = value
         self._notify()    

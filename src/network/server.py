@@ -174,12 +174,12 @@ class ServerManager(Observer):
                 except HandshakeError:
                     return
 
-                self._conn.update_state()
+                self._conn.update_state(True)
                 while not self._stop_event.is_set():
                     try:
                         msg_type, payload = peer_sock.recv_frame()
                     except ConnectionLostError:
-                        self._conn.update_state()
+                        self._conn.update_state(False)
                         break
                     except timeout:
                         continue
@@ -189,7 +189,7 @@ class ServerManager(Observer):
                         self._msg_out.display(processed_msg)
                     elif msg_type == MessageType.QUIT:
                         self._msg_out.display("Peer has left the chat.")
-                        self._conn.update_state()
+                        self._conn.update_state(False)
                     else:
                         self._msg_out.display(
                             f"Ignored unexpected control frame: {msg_type.name}"

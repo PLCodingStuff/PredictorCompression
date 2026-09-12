@@ -105,7 +105,7 @@ class ClientManager(Observer):
                     print(f"Handshake failed: {e}", file=sys.stderr)
                     return
 
-                self._conn.update_state()
+                self._conn.update_state(True)
 
                 msg: str = ""
                 while not self._stop_event.is_set():
@@ -116,7 +116,7 @@ class ClientManager(Observer):
                             sock.send_frame(MessageType.QUIT)
                         except (ConnectionLostError, OSError):
                             pass
-                        self._conn.update_state()
+                        self._conn.update_state(False)
                         break
 
                     processed_msg: bytearray = self._message_proc.prepare_to_send(msg)
