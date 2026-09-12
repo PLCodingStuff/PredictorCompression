@@ -1,4 +1,6 @@
 {
-    "peer_port": 5000,
-    "port": 6000
+    "address": "127.0.0.1",
+    "port": 6000,
+    "timeout": 4.0,
+    "retries": 3
 }
