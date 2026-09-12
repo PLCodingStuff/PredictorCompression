@@ -6,14 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A peer-to-peer chat application (course project for "Software Design and Development") demonstrating network programming, the observer pattern, and a custom lossless text compression scheme ("Predictor" compression, based on [RFC 1978](https://datatracker.ietf.org/doc/rfc1978/)). Each running node opens both a server socket (to accept the peer's incoming connection) and a client socket (to connect out to the peer), so two nodes can chat with each other over TCP.
 
-Python 3.11, dependency management via `uv` (see `uv.lock`, `pyproject.toml`). `bitarray` is the only runtime dependency.
-
 ## Commands
 
-- Run all tests: `uv run pytest` (or `pytest` if the venv is already active)
 - Run a single test file: `uv run pytest tests/test_compression.py -v`
 - Run a single test: `uv run pytest tests/test_server.py::TestConfig::test_server_socket_config -v`
-- Lint: `ruff check .`
 - CLI entry point: `py main.py` → dispatches to the `p2ppred` argparse CLI built in `src/cli/commands.py`
   - `py main.py validate <config.json>` — validate a config file
   - `py main.py compress "text"` — compress text, prints hex (or `-o file` to write raw bytes)
@@ -22,8 +18,6 @@ Python 3.11, dependency management via `uv` (see `uv.lock`, `pyproject.toml`). `
 - Benchmarks: `py benchmark.py benchmark` (all corpora) or `py benchmark.py benchmark --test-file <name.txt>` — note the `benchmark` subcommand is required
 
 **Set `PYTHONIOENCODING=utf-8` before running `main.py` or `benchmark.py` on a Windows console.** Both print non-cp1252 glyphs (`✓`, `✗`, `⚡`) and crash with `UnicodeEncodeError` without it. This fails *misleadingly* in `cmd_validate`: `UnicodeEncodeError` subclasses `ValueError`, so printing the `✓` on a **valid** config is caught by the command's own `except (ValueError, FileNotFoundError)` and reported as `✗ Config is invalid: 'charmap' codec can't encode...` with exit code 1.
-
-CI (`.github/workflows/python-app.yml`) runs on `windows-latest` for pushes/PRs to `main`: installs `requirements.txt`, then runs `ruff check .` followed by `pytest`.
 
 `.claude/skills/run-predictorcompression/` holds the scripts (`smoke_cli.py`, `drive_start.py`) for driving the CLI and a two-node chat session end-to-end — use it rather than hand-rolling a peer harness.
 
