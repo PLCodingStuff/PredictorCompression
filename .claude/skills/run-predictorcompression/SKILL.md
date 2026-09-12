@@ -74,14 +74,24 @@ uv run python main.py start <server_config.json> <client_config.json> -v
 
 `start` blocks on an interactive `input("> ")` prompt for chat text; type
 `quit` to stop that side. It needs a second `start` process (with swapped
-server/client ports) as its peer to actually connect to — see
-`drive_start.py` for a working two-process pairing example, since
-`node1config.json`/`node2config.json` at the repo root are NOT directly
-usable as the `server_json`/`client_json` pair `start` expects (they use a
-different single-file `port`/`peer_port` shape that the current config
-loader doesn't read for this purpose — `read_config_json` only ever reads
-the `port` key, so for the *client* config file `port` must hold the
-peer's port, not this node's own port).
+server/client configs) as its peer to actually connect to. `node1config.json`
+(port `5000`) and `node2config.json` (port `6000`) at the repo root are a
+ready-to-run pair, used in swapped order — verified live:
+
+```
+uv run python main.py start node1config.json node2config.json   # node 1
+uv run python main.py start node2config.json node1config.json   # node 2
+```
+
+(Earlier revisions of this skill claimed these two files used a
+`port`/`peer_port` shape the loader couldn't read for this purpose — that
+was true before commit `6cea579` ("Updated demo node1config.json and
+node2config.json to the schema of the config files."), which rewrote both
+to the plain `address`/`port`/`timeout`/`retries` schema. Don't reintroduce
+that claim without re-checking the files' actual current contents.)
+
+See `drive_start.py` for a scripted two-process pairing example (it uses
+its own temp-file configs rather than these two).
 
 ## Test suite
 
