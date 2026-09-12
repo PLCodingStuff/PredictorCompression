@@ -99,7 +99,7 @@ its own temp-file configs rather than these two).
 uv run pytest
 ```
 
-As of this writing this passes cleanly: 61 passed, 1 skipped (a
+As of this writing this passes cleanly: 62 passed, 1 skipped (a
 `@pytest.mark.skip(reason="TODO")` in `tests/test_server.py`). There is no
 `demo/` directory in the current checkout — an earlier version of this
 skill referenced pre-existing failures there; that's stale, ignore it. Any
@@ -122,20 +122,34 @@ failure under `tests/` today is a real regression worth investigating.
   or may not catch up depending on config `retries`/`timeout`. Give it a
   few seconds (`drive_start.py` sleeps 5s) before trusting a "not
   connected" result.
-- **`quit` does reach the peer.** Typing `quit` sends a `MessageType.QUIT`
-  frame to the peer and updates this node's own `Connection` state.
-  `ServerManager.run()` on the *receiving* side (`src/network/server.py:
-  190-192`) handles that frame by printing `Peer has left the chat.` and
-  calling its own `Connection.update_state()`, which (via the
-  `Observer`/`Observable` wiring in `Node.__init__`) notifies that peer's
-  own `ServerManager` *and* `ClientManager`. Verified live with a probe
-  script: node A exited cleanly (code 0, printed `Peer has left the
-  chat.`) after node B sent `quit`, without A's own stdin ever being
-  touched. Note the peer's `ClientManager` loop is otherwise blocked in a
-  plain `input()` call with no timeout (`message_source.py`), so if you
-  see a peer *not* exiting promptly after a `quit`, that blocking read is
-  the first place to look — but in practice it has not reproduced as a
-  hang.
+- **Multi-message conversations are reliable now — they weren't always.**
+  Until commit `d8c5d54`/`329b0ee`, `Connection.update_state()` blindly
+  toggled a boolean instead of setting it explicitly. Every session calls
+  it twice early on from the *same* node — once when its own server
+  finishes accepting+handshaking, once when its own client finishes
+  connecting+handshaking — and the toggle read the second "just connected"
+  confirmation as a disconnect, arming `stop_event` almost immediately
+  after both handshakes completed. In practice this capped real
+  conversations to at most one message (sometimes zero), by luck of
+  timing, not by design. `update_state(value: bool)` now sets the state
+  explicitly, so the two connect confirmations are idempotent and only a
+  real disconnect/quit trips the stop condition — verified live with
+  multi-message back-and-forth exchanges in both directions, not just a
+  single message.
+- **`quit` correctly notifies the peer.** Typing `quit` sends a
+  `MessageType.QUIT` frame to the peer and sets this node's own
+  `Connection` state to disconnected. `ServerManager.run()` on the
+  *receiving* side (`src/network/server.py:190-192`) handles that frame by
+  printing `Peer has left the chat.` and setting its own `Connection`
+  state to disconnected, which (via the `Observer`/`Observable` wiring in
+  `Node.__init__`) notifies that peer's own `ServerManager` *and*
+  `ClientManager`. If only one side quits, only the *other* side prints
+  `Peer has left the chat.` — the side that quit does not see that message
+  about its own departure. Note the peer's `ClientManager` loop is
+  otherwise blocked in a plain `input()` call with no timeout
+  (`message_source.py`), so if you see a peer *not* exiting promptly after
+  a `quit`, that blocking read is the first place to look — but in
+  practice it has not reproduced as a hang.
 
 ## Troubleshooting
 
