@@ -42,9 +42,6 @@ def run_benchmarks(target_file=None):
         print("❌ No benchmark files found matching target.")
         sys.exit(1)
 
-    compressor = Compression()
-    decompressor = Decompression()
-
     print(f"\n{'='*95}")
     print("⚡ BENCHMARK REPORT: PREDICTOR COMPRESSION (PAYLOAD ONLY)")
     print(f"{'='*95}")
@@ -58,6 +55,9 @@ def run_benchmarks(target_file=None):
             
         with open(file_path, "r", encoding="ascii") as f:
             lines = f.readlines()
+
+        compressor = Compression()
+        decompressor = Decompression()
 
         total_payload_uncompressed = ""
         total_execution_time_ms = 0.0

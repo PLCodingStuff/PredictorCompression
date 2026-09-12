@@ -18,6 +18,9 @@ class Compression():
     k = 2
     ASCII = "ASCII"
 
+    def __init__(self) -> None:
+        self.__guess_table: list[str] = [" "] * 65536
+
     @staticmethod
     def __hash_function(substring: str) -> int:
         """
@@ -69,9 +72,9 @@ class Compression():
         return result
 
     @staticmethod
-    def __init_arrays(S: str) -> tuple[bitarray, list[str], list[str]]:
+    def __init_arrays(S: str) -> tuple[bitarray, list[str]]:
         """
-        Initialize the bit array, leftovers list, and guess table for compression.
+        Initialize the bit array and leftovers list for compression.
 
         Args:
             S (str): The string to be compressed.
@@ -80,10 +83,8 @@ class Compression():
             tuple: A tuple containing:
                    - bit_array: A bitarray initialized with all bits set to 0.
                    - leftovers: A list of initial leftover characters.
-                   - guess_table: A preallocated list for storing guessed characters.
 
-        The `leftovers` list starts with the first few characters of `S`, and
-        the `guess_table` is a lookup table for guessed characters based on hashes.
+        The `leftovers` list starts with the first few characters of `S`.
         """
         bit_array: bitarray = bitarray(len(S))
         bit_array.setall(0)  # Set all bits to 0 initially
@@ -93,9 +94,7 @@ class Compression():
         except IndexError:
             leftovers: list[str] = [S[0]]
 
-        guess_table: list[str] = [" "] * 65536
-
-        return bit_array, leftovers, guess_table
+        return bit_array, leftovers
 
     def payload_compression(self, S: str) -> bytearray:
         """
@@ -121,16 +120,16 @@ class Compression():
         if len(S) <= Compression.k:
             return bytearray(S, encoding=Compression.ASCII)
 
-        bit_array, leftovers, guess_table = self.__init_arrays(S)
+        bit_array, leftovers = self.__init_arrays(S)
 
         for i in range(Compression.k, len(S)):
             substring = S[i - Compression.k : i]
             hash_val = self.__hash_function(substring)
 
-            if guess_table[hash_val] == S[i]:
+            if self.__guess_table[hash_val] == S[i]:
                 bit_array[i] = 1
             else:
                 leftovers.append(S[i])
-                guess_table[hash_val] = S[i]
+                self.__guess_table[hash_val] = S[i]
 
         return self.__merge_bit_array_leftovers(leftovers, bit_array)

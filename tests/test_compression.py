@@ -31,3 +31,15 @@ def test_empty_str():
 
     with pytest.raises(ValueError, match="Empty string passed to compressor"):
         compressor.payload_compression(test_msg)
+
+
+def test_guess_table_persists_across_messages():
+    compressor: Compression = Compression()
+
+    test_message: str = "Hello World"
+
+    first_pass: bytearray = compressor.payload_compression(test_message)
+    second_pass: bytearray = compressor.payload_compression(test_message)
+
+    assert len(second_pass) <= len(first_pass)
+    assert second_pass != first_pass

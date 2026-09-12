@@ -16,6 +16,9 @@ class Decompression:
     k = 2
     ASCII="ASCII"
 
+    def __init__(self) -> None:
+        self.__guess_table: list[str] = [' '] * 65536
+
     @staticmethod
     def __hash_function(substring: str) -> int:
         """
@@ -38,21 +41,20 @@ class Decompression:
 
 
     @staticmethod
-    def __init_arrays(compressed_data: bytearray)->tuple[list[str], list[str], bitarray, list[str]]:
+    def __init_arrays(compressed_data: bytearray)->tuple[list[str], list[str], bitarray]:
         """
-        Initialize the leftovers, decompressed text, flag bits, and guess table.
+        Initialize the leftovers, decompressed text, and flag bits.
 
         Args:
             compressed_data (bytearray): The compressed byte array.
-        
+
         Returns:
             tuple: A tuple containing:
                    - leftovers: A list of characters not found in the guess table.
                    - decompressed_text: The partially decompressed text.
                    - flag_bits: A bitarray representing the flags used during compression.
-                   - guess_table: A preallocated list for storing guessed characters.
-        
-        The leftovers are extracted from the first part of the compressed data, 
+
+        The leftovers are extracted from the first part of the compressed data,
         and the bit array is derived from the remaining bytes.
         """
         # leftovers_length: int = compressed_data[0]+1
@@ -68,10 +70,8 @@ class Decompression:
         flag_bits = bitarray()
         # flag_bits.frombytes(compressed_data[leftovers_length:])
         flag_bits.frombytes(compressed_data[2+leftovers_length:])
-        
-        guess_table: list[str] = [' '] * 65536
 
-        return leftovers, decompressed_text, flag_bits, guess_table
+        return leftovers, decompressed_text, flag_bits
 
 
     def payload_decompression(self, compressed_data: bytearray)->str:
@@ -98,7 +98,7 @@ class Decompression:
         if(len(compressed_data) <= Decompression.k):  # e.g. "Hi" <= (k is 2)
             return str(compressed_data, encoding=Decompression.ASCII)
 
-        leftovers, decompressed_text, flag_bits, guess_table = self.__init_arrays(compressed_data)
+        leftovers, decompressed_text, flag_bits = self.__init_arrays(compressed_data)
 
         leftovers_index:int = self.k
         for i in range(self.k, len(flag_bits)):
@@ -106,12 +106,12 @@ class Decompression:
             hash_val = self.__hash_function(substring)
 
             if flag_bits[i]:
-                decompressed_text.append(guess_table[hash_val])
+                decompressed_text.append(self.__guess_table[hash_val])
             elif leftovers_index < len(leftovers):
                 actual_char = leftovers[leftovers_index]
                 leftovers_index += 1
                 decompressed_text.append(actual_char)
-                guess_table[hash_val] = actual_char
+                self.__guess_table[hash_val] = actual_char
             else:
                 break
 
