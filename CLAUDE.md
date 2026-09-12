@@ -65,16 +65,4 @@ Some tests intentionally print to stdout mid-run (`Peer has left the chat.`, ech
 - `ClientSocket.__enter__`'s `raise ConnectTimeOutError` sits *inside* the `for _ in range(retries)` body, so the first `socket.timeout` aborts and `retries` is effectively 1 — unlike `ServerSocket.accept()`, which really does loop. This makes the rendezvous race above worse than the config suggests.
 - `create_client_config` passes positionally as `ClientSocketConfig(address, port, retries, timeout)` while `create_server_config` passes `ServerSocketConfig(address, port, timeout, retries)` — the two dataclasses declare those last two fields in opposite order, so the field order is correct but easy to "fix" wrongly.
 - `README.md` is stale — it documents a single-argument `py main.py config.json` invocation, a flat top-level file layout, and a `NetworkComponent` base class, none of which exist any more. Trust the code over the README.
-- `demo/` is a scratch area exploring CLI framework choices (argparse vs click vs typer) and is unrelated to the production CLI in `src/cli/commands.py`.
-- `requirements.txt` (what CI installs) pins `bitarray==2.9.2`, while `pyproject.toml`/`uv.lock` (what `uv run` uses locally) specify `bitarray>=3.8.0` (locked to `3.8.0`) — CI and local dev can end up exercising different `bitarray` versions.
-
-## Resuming after a break
-
-`Predictor Compression P2P.md` at the repo root is the task backlog — read it first when picking this project back up after time away, since you (Claude) are stateless between sessions and this file is the continuity mechanism. It's organized as:
-- **Now / Low-energy queue / Backlog** — priority buckets, each item tagged with effort (`#e/low`, `#e/med`, `#e/high`).
-- **Topic labels** (`bug`, `testing`, `compression`, `docs`, `build/ci`, `cleanup`, `cli`, `architecture`) — an orthogonal axis layered on top of the priority buckets, not a replacement for them; see the label breakdown discussed in-session for which task belongs to which.
-- **Log** — dated entries recording what was reviewed/decided/changed each session. Read this to recover *why* a task is phrased the way it is before redoing analysis that already happened.
-
-When finishing a session that changes priorities, completes a task, or makes a non-obvious decision, add a dated entry to the Log and update the task list — this file is the only thing carrying context forward, since neither this CLAUDE.md nor conversation history persists on its own.
-
-The user also has their own broader project-organization system (outside this repo) that has not been described here yet — don't assume `Predictor Compression P2P.md`'s structure is the whole picture. If the user brings it up, ask how this repo's task file should fit into it and update this note accordingly.
+- `requirements.txt` was removed — it pinned `bitarray==2.9.2` (stale vs. `pyproject.toml`/`uv.lock`'s `bitarray>=3.8.0`, locked to `3.8.0`) and nothing installs from it anymore: `.github/workflows/python-app.yml` runs `uv sync --locked` + `uv run ruff check .`/`uv run pytest`, so CI uses `uv.lock` like local dev does. (This same "CI vs local get different tool versions" failure mode is what previously caused CI's `ruff check` to fail while local passed — an unpinned `pip install ruff` had grabbed a newer ruff whose broadened default rule set flagged 45 issues that 0.15.15, pinned in `uv.lock`, didn't.) `README.md`'s `pip install -r requirements.txt` line is now doubly stale — the file it references doesn't exist.
