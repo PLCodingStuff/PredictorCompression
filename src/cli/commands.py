@@ -114,7 +114,7 @@ def cmd_start(args):
         print("Terminating Process")
 
 
-def add_start_subarser(subarsers):
+def add_start_subparser(subarsers):
     start_parser = subarsers.add_parser(
         "start", help="Start a node"
     )
@@ -153,6 +153,6 @@ def build_parser() -> ArgumentParser:
     add_validate_subparser(p2ppred_subparsers)
     add_compress_subparser(p2ppred_subparsers)
     add_decompress_subparser(p2ppred_subparsers)
-    add_start_subarser(p2ppred_subparsers)
+    add_start_subparser(p2ppred_subparsers)
 
     return p2ppred
