@@ -53,7 +53,7 @@ class ClientSocket(socket):
             except timeout:
                 pass
 
-            raise ConnectTimeOutError(self._config.retries)
+        raise ConnectTimeOutError(self._config.retries)
 
     def __exit__(self, exc_type, exc, tb) -> bool:
         self._close_socket()
