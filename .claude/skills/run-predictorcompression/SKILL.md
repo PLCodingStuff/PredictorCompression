@@ -5,9 +5,9 @@ description: Build, run, and drive the p2ppred CLI (validate/compress/decompress
 
 Paths below are relative to the repo root (`C:\Users\plwos\Documents\GitHub\PredictorCompression`).
 
-This is a Python 3.11 CLI tool (`p2ppred`, entry point `main.py`), not a
+This is a Python 3.11 CLI tool (`p2ppred`, entry point `p2ppred.py`), not a
 GUI/web app. It has no persistent server to curl — it's driven by invoking
-`main.py` subcommands and reading stdout/exit codes, plus one interactive
+`p2ppred.py` subcommands and reading stdout/exit codes, plus one interactive
 two-process subcommand (`start`) for node-to-node chat.
 
 ## Prerequisites
@@ -20,7 +20,7 @@ two-process subcommand (`start`) for node-to-node chat.
 Nothing to build. Dependencies resolve on first `uv run`:
 
 ```
-uv run python main.py --version
+uv run python p2ppred.py --version
 ```
 
 ## Run (agent path)
@@ -66,10 +66,10 @@ Decompression().payload_decompression(data)  # == "some text"
 ## Run (human path)
 
 ```
-uv run python main.py validate node1config.json
-uv run python main.py compress "some text"
-uv run python main.py decompress <hex>
-uv run python main.py start <server_config.json> <client_config.json> -v
+uv run python p2ppred.py validate node1config.json
+uv run python p2ppred.py compress "some text"
+uv run python p2ppred.py decompress <hex>
+uv run python p2ppred.py start <server_config.json> <client_config.json> -v
 ```
 
 `start` blocks on an interactive `input("> ")` prompt for chat text; type
@@ -79,8 +79,8 @@ server/client configs) as its peer to actually connect to. `node1config.json`
 ready-to-run pair, used in swapped order — verified live:
 
 ```
-uv run python main.py start node1config.json node2config.json   # node 1
-uv run python main.py start node2config.json node1config.json   # node 2
+uv run python p2ppred.py start node1config.json node2config.json   # node 1
+uv run python p2ppred.py start node2config.json node1config.json   # node 2
 ```
 
 (Earlier revisions of this skill claimed these two files used a
@@ -114,7 +114,7 @@ failure under `tests/` today is a real regression worth investigating.
   reports back as `"Config is invalid: 'charmap' codec can't encode..."` —
   i.e. a perfectly valid config gets reported as invalid, and a successful
   compression as failed. **Fix: always set `PYTHONIOENCODING=utf-8`** before
-  invoking `main.py` (both driver scripts here do this already).
+  invoking `p2ppred.py` (both driver scripts here do this already).
 - **Connecting both sides is a race, not a rendezvous.** `Node.start_chat()`
   starts the server in a background thread and immediately runs the client
   on the calling thread with no barrier — if the peer's server hasn't
@@ -141,5 +141,5 @@ failure under `tests/` today is a real regression worth investigating.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `✗ Config is invalid: 'charmap' codec can't encode character '✓'...` on a valid config | Windows console isn't UTF-8 | `PYTHONIOENCODING=utf-8 uv run python main.py validate ...` |
+| `✗ Config is invalid: 'charmap' codec can't encode character '✓'...` on a valid config | Windows console isn't UTF-8 | `PYTHONIOENCODING=utf-8 uv run python p2ppred.py validate ...` |
 | `git bash` / MSYS path like `-o /tmp/out.bin` resolves to `C:/Program Files/Git/tmp/out.bin` and fails with `PermissionError` | MSYS path translation rewrites leading `/tmp` | Use a `C:/...` path (or a path under the scratch dir) for `-o`, not a bare `/tmp/...` path |

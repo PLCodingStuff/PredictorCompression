@@ -33,10 +33,10 @@ Python 3.11 was used for the implementation.
 **Compress / decompress round-trip:**
 
 ```console
-$ py main.py compress "The quick brown fox jumps over the lazy dog"
+$ py p2ppred.py compress "The quick brown fox jumps over the lazy dog"
 0023546865717569636b62726f776e666f786a756d70736f7665727468656c617a79646f67104110422100
 
-$ py main.py decompress 0023546865717569636b62726f776e666f786a756d70736f7665727468656c617a79646f67104110422100
+$ py p2ppred.py decompress 0023546865717569636b62726f776e666f786a756d70736f7665727468656c617a79646f67104110422100
 The quick brown fox jumps over the lazy dog
 ```
 
@@ -44,7 +44,7 @@ The quick brown fox jumps over the lazy dog
 
 ```console
 # Terminal 1 — node 1
-$ py main.py start node1config.json node2config.json
+$ py p2ppred.py start node1config.json node2config.json
 Starting chat...
 > Hey, can you see this?
 Yep, loud and clear!
@@ -56,7 +56,7 @@ Terminating Process
 
 ```console
 # Terminal 2 — node 2
-$ py main.py start node2config.json node1config.json
+$ py p2ppred.py start node2config.json node1config.json
 Starting chat...
 Hey, can you see this?
 > Yep, loud and clear!
@@ -97,7 +97,7 @@ Each side's typed lines are compressed and sent over the wire, decompressed, and
 ### Project Structure
 
 ```
-main.py                                  # CLI entry point
+p2ppred.py                                  # CLI entry point
 benchmark.py                             # compression benchmark runner
 src/
   cli/commands.py                        # p2ppred argparse CLI (validate/compress/decompress/start)
@@ -137,16 +137,16 @@ tests/                                   # pytest suite, mirrors src/ one file p
 
 ## Usage
 
-The CLI entry point is `main.py`, which dispatches to the `p2ppred` subcommands:
+The CLI entry point is `p2ppred.py`, which dispatches to the `p2ppred` subcommands:
 
 ```bash
-py main.py validate <config.json>              # validate a config file
-py main.py compress "some text"                # compress text, prints hex
-py main.py decompress <hex>                     # decompress a hex string back to text
-py main.py start <server_config.json> <client_config.json>   # start a two-way chat node
+py p2ppred.py validate <config.json>              # validate a config file
+py p2ppred.py compress "some text"                # compress text, prints hex
+py p2ppred.py decompress <hex>                     # decompress a hex string back to text
+py p2ppred.py start <server_config.json> <client_config.json>   # start a two-way chat node
 ```
 
-(Prefix with `uv run` instead of `py` if you're not in an activated environment, e.g. `uv run python main.py validate config.json`.)
+(Prefix with `uv run` instead of `py` if you're not in an activated environment, e.g. `uv run python p2ppred.py validate config.json`.)
 
 ### Configuration Files
 
@@ -166,8 +166,8 @@ Each node needs **two** JSON config files: one for its server socket, one for it
 To run two local nodes against each other you need four files in total (a server + client config per node) — or just two files used in swapped order, since each side's own config doubles as its peer's dial target. `node1config.json` (port `5000`) and `node2config.json` (port `6000`) at the repo root are a ready-to-run example pair:
 
 ```bash
-py main.py start node1config.json node2config.json   # node 1: listens on 5000, dials 6000
-py main.py start node2config.json node1config.json   # node 2: listens on 6000, dials 5000
+py p2ppred.py start node1config.json node2config.json   # node 1: listens on 5000, dials 6000
+py p2ppred.py start node2config.json node1config.json   # node 2: listens on 6000, dials 5000
 ```
 
 ## Testing and Benchmarking

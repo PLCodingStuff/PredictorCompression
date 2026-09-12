@@ -10,14 +10,14 @@ A peer-to-peer chat application (course project for "Software Design and Develop
 
 - Run a single test file: `uv run pytest tests/test_compression.py -v`
 - Run a single test: `uv run pytest tests/test_server.py::TestConfig::test_server_socket_config -v`
-- CLI entry point: `py main.py` → dispatches to the `p2ppred` argparse CLI built in `src/cli/commands.py`
-  - `py main.py validate <config.json>` — validate a config file
-  - `py main.py compress "text"` — compress text, prints hex (or `-o file` to write raw bytes)
-  - `py main.py decompress <hex>` — decompress a hex string back to text
-  - `py main.py start <server_config.json> <client_config.json>` — start a two-way chat node; needs a second `start` process (with swapped server/client configs) as its peer to connect to
+- CLI entry point: `py p2ppred.py` → dispatches to the `p2ppred` argparse CLI built in `src/cli/commands.py`
+  - `py p2ppred.py validate <config.json>` — validate a config file
+  - `py p2ppred.py compress "text"` — compress text, prints hex (or `-o file` to write raw bytes)
+  - `py p2ppred.py decompress <hex>` — decompress a hex string back to text
+  - `py p2ppred.py start <server_config.json> <client_config.json>` — start a two-way chat node; needs a second `start` process (with swapped server/client configs) as its peer to connect to
 - Benchmarks: `py benchmark.py benchmark` (all corpora) or `py benchmark.py benchmark --test-file <name.txt>` — note the `benchmark` subcommand is required
 
-**Set `PYTHONIOENCODING=utf-8` before running `main.py` or `benchmark.py` on a Windows console.** Both print non-cp1252 glyphs (`✓`, `✗`, `⚡`) and crash with `UnicodeEncodeError` without it. This fails *misleadingly* in `cmd_validate`: `UnicodeEncodeError` subclasses `ValueError`, so printing the `✓` on a **valid** config is caught by the command's own `except (ValueError, FileNotFoundError)` and reported as `✗ Config is invalid: 'charmap' codec can't encode...` with exit code 1.
+**Set `PYTHONIOENCODING=utf-8` before running `p2ppred.py` or `benchmark.py` on a Windows console.** Both print non-cp1252 glyphs (`✓`, `✗`, `⚡`) and crash with `UnicodeEncodeError` without it. This fails *misleadingly* in `cmd_validate`: `UnicodeEncodeError` subclasses `ValueError`, so printing the `✓` on a **valid** config is caught by the command's own `except (ValueError, FileNotFoundError)` and reported as `✗ Config is invalid: 'charmap' codec can't encode...` with exit code 1.
 
 `.claude/skills/run-predictorcompression/` holds the scripts (`smoke_cli.py`, `drive_start.py`) for driving the CLI and a two-node chat session end-to-end — use it rather than hand-rolling a peer harness.
 
@@ -60,9 +60,8 @@ Some tests intentionally print to stdout mid-run (`Peer has left the chat.`, ech
 
 ## Notes
 
-- `main.py` still contains a large commented-out block of an older, non-CLI entry point (direct `Node(server_conf, client_conf)` construction) — the live path is `build_parser()` from `src/cli/commands.py`.
+- `p2ppred.py` (renamed from `main.py`) still contains a large commented-out block of an older, non-CLI entry point (direct `Node(server_conf, client_conf)` construction) — the live path is `build_parser()` from `src/cli/commands.py`.
 - `Node.start_chat()` starts the server in a background thread and immediately runs the client on the calling thread with no barrier — if the peer's server hasn't called `listen()` yet, connecting is a race against the client's retry/timeout config, not a guaranteed rendezvous.
 - `ClientSocket.__enter__`'s `raise ConnectTimeOutError` sits *inside* the `for _ in range(retries)` body, so the first `socket.timeout` aborts and `retries` is effectively 1 — unlike `ServerSocket.accept()`, which really does loop. This makes the rendezvous race above worse than the config suggests.
 - `create_client_config` passes positionally as `ClientSocketConfig(address, port, retries, timeout)` while `create_server_config` passes `ServerSocketConfig(address, port, timeout, retries)` — the two dataclasses declare those last two fields in opposite order, so the field order is correct but easy to "fix" wrongly.
-- `README.md` is stale — it documents a single-argument `py main.py config.json` invocation, a flat top-level file layout, and a `NetworkComponent` base class, none of which exist any more. Trust the code over the README.
-- `requirements.txt` was removed — it pinned `bitarray==2.9.2` (stale vs. `pyproject.toml`/`uv.lock`'s `bitarray>=3.8.0`, locked to `3.8.0`) and nothing installs from it anymore: `.github/workflows/python-app.yml` runs `uv sync --locked` + `uv run ruff check .`/`uv run pytest`, so CI uses `uv.lock` like local dev does. (This same "CI vs local get different tool versions" failure mode is what previously caused CI's `ruff check` to fail while local passed — an unpinned `pip install ruff` had grabbed a newer ruff whose broadened default rule set flagged 45 issues that 0.15.15, pinned in `uv.lock`, didn't.) `README.md`'s `pip install -r requirements.txt` line is now doubly stale — the file it references doesn't exist.
+- `requirements.txt` was removed — it pinned `bitarray==2.9.2` (stale vs. `pyproject.toml`/`uv.lock`'s `bitarray>=3.8.0`, locked to `3.8.0`) and nothing installs from it anymore: `.github/workflows/python-app.yml` runs `uv sync --locked` + `uv run ruff check .`/`uv run pytest`, so CI uses `uv.lock` like local dev does. (This same "CI vs local get different tool versions" failure mode is what previously caused CI's `ruff check` to fail while local passed — an unpinned `pip install ruff` had grabbed a newer ruff whose broadened default rule set flagged 45 issues that 0.15.15, pinned in `uv.lock`, didn't.)

@@ -40,7 +40,7 @@ def write_config(path, port, peer_port):
 
 def spawn(server_json, client_json):
     return subprocess.Popen(
-        [sys.executable, "main.py", "start", server_json, client_json, "-v"],
+        [sys.executable, "p2ppred.py", "start", server_json, client_json, "-v"],
         cwd=ROOT,
         env=ENV,
         stdin=subprocess.PIPE,

@@ -20,7 +20,7 @@ failures = []
 
 def run(*args):
     return subprocess.run(
-        [sys.executable, "main.py", *args],
+        [sys.executable, "p2ppred.py", *args],
         cwd=ROOT,
         env=ENV,
         capture_output=True,
