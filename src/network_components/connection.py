@@ -17,7 +17,7 @@ class Connection(Observable):
         detach(observer: Observer) -> None: Detaches an observer from this connection.
         _notify() -> None: Notifies all attached observers of the state change.
         state -> bool: Property to get the current state of the connection.
-        update_state() -> None: Toggles the connection state and notifies observers.
+        update_state(value: bool) -> None: Sets the connection state and notifies observers.
     """
     def __init__(self):
         self._state: bool = False
@@ -72,10 +72,12 @@ class Connection(Observable):
 
     def update_state(self, value: bool)->None:
         """
-        Toggle the state of the connection and notify observers.
+        Set the state of the connection and notify observers.
 
-        This method inverts the current state (from True to False or vice versa) 
-        and triggers the `_notify` method to inform all observers of the state change.
+        This method sets the state to the given value (rather than toggling it,
+        since two independent events can each mean "connected" without the
+        second one meaning "disconnected") and triggers the `_notify` method to
+        inform all observers of the state change.
         """
         self._state = value
-        self._notify()    
+        self._notify()

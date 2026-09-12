@@ -24,9 +24,9 @@ def test_update_state_no_observers():
     # Initial state == False
     conn: Connection = Connection()
 
-    conn.update_state()  # True
-    conn.update_state()  # False
-    conn.update_state()  # True
+    conn.update_state(True)
+    conn.update_state(False)
+    conn.update_state(True)
 
     assert conn.state
 
@@ -89,7 +89,7 @@ def test_update_state_behavior():
 
     conn.attach(obs)
 
-    conn.update_state()
+    conn.update_state(True)
 
     assert obs.counter == 1
 
@@ -101,7 +101,7 @@ def test_update_state_two_observers_behavior():
     conn.attach(obs_1)
     conn.attach(obs_2)
 
-    conn.update_state()
+    conn.update_state(True)
 
     assert obs_1.counter == 1
     assert obs_2.counter == 1
@@ -112,15 +112,26 @@ def test_update_state_connection_argument():
     obs: HelperObserver = HelperObserver()
 
     conn.attach(obs)
-    conn.update_state()
+    conn.update_state(True)
 
     assert obs.data == conn
 
 
-def test_state_after_repeated_toggling():
+def test_repeated_same_value_is_idempotent():
+    # Two independent "connected" events (server-side handshake, client-side
+    # handshake) both pass True; the second one must not flip state to False.
     conn: Connection = Connection()
 
+    conn.update_state(True)
     for _ in range(TOGGLES):
-        old_state: bool = conn.state
-        conn.update_state()
-        assert conn.state != old_state
+        conn.update_state(True)
+        assert conn.state is True
+
+
+def test_state_matches_last_explicit_value():
+    conn: Connection = Connection()
+
+    for i in range(TOGGLES):
+        value: bool = bool(i % 2)
+        conn.update_state(value)
+        assert conn.state == value

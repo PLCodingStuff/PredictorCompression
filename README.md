@@ -65,7 +65,7 @@ Node 1 displays the message node 2 typed, compressed and sent over the wire; nod
 
 - **Client-Server Communication**: Each running node opens both a server socket (to accept the peer's incoming connection) and a client socket (to connect out to the peer), driven through a small length-prefixed wire protocol with a `HELLO`/`ACK` handshake.
 - **Data Compression**: Uses a custom Predictor-based compression scheme to minimize the size of transmitted messages.
-- **Observer Pattern**: The server and client sides are both `Observer`s of a shared `Connection`, so either side toggling the connection state (e.g. on disconnect) notifies the other.
+- **Observer Pattern**: The server and client sides are both `Observer`s of a shared `Connection`, so either side setting the connection state (e.g. on disconnect) notifies the other.
 - **Network Handling**: Dedicated error types for handshake failures, connection loss, and accept/connect timeouts.
 - **CLI**: A `p2ppred` command-line tool for validating configs, compressing/decompressing text directly, and starting a chat node.
 
@@ -83,7 +83,7 @@ Node 1 displays the message node 2 typed, compressed and sent over the wire; nod
 - **Server & Client** (`src/network/server.py`, `src/network/client.py`) each own their socket lifecycle — bind/listen/accept with retries on the server side, connect with retries on the client side — and, once connected, run a handshake before entering their receive/send loop.
 - **Wire protocol** (`src/network_components/`): a small length-prefixed framing format (`HELLO`/`ACK`/`MSG`/`QUIT`) sits on top of raw TCP, plus a symmetric `HELLO`/`ACK` handshake run before either side exchanges chat messages.
 - **Compression** (`src/business/compression/`): outgoing messages are passed through the custom Predictor algorithm before being framed and sent; incoming messages are decompressed the same way before being displayed.
-- **Observer pattern** (`src/interfaces/`): the server and client are both observers of one shared `Connection`. Either side toggling the connection state (e.g. a peer disconnecting) notifies the other, so both loops stop together.
+- **Observer pattern** (`src/interfaces/`): the server and client are both observers of one shared `Connection`. Either side setting the connection state (e.g. a peer disconnecting) notifies the other, so both loops stop together.
 - **Config loading** (`src/config/config.py`): loads a node's JSON config (`port` required; `timeout`, `retries`, `address` default if absent) and builds the corresponding `ServerSocketConfig`/`ClientSocketConfig`.
 
 ### Project Structure
