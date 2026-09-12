@@ -56,8 +56,11 @@ def run_benchmarks(target_file=None):
         with open(file_path, "r", encoding="ascii") as f:
             lines = f.readlines()
 
-        compressor = Compression()
-        decompressor = Decompression()
+        # One Compression/Decompression pair per speaker: in the real app, a
+        # speaker's outgoing messages are compressed by their own Node's Client
+        # and decompressed by the peer's Node's Server, so those two tables stay
+        # in lockstep with each other but never see the other speaker's stream.
+        speaker_codecs = {}
 
         total_payload_uncompressed = ""
         total_execution_time_ms = 0.0
@@ -69,20 +72,24 @@ def run_benchmarks(target_file=None):
             line = line.strip()
             if not line or ": " not in line:
                 continue
-                
+
             # Split into Speaker ("Alice") and Message ("Hey! How'd ur day go?...")
             speaker, payload = line.split(": ", 1)
-            
+
+            if speaker not in speaker_codecs:
+                speaker_codecs[speaker] = (Compression(), Decompression())
+            compressor, decompressor = speaker_codecs[speaker]
+
             total_payload_uncompressed += payload
-            
+
             # Benchmark the compression of the payload only
             start_time = time.perf_counter()
             compressed_payload = compressor.payload_compression(payload)
             end_time = time.perf_counter()
-            
+
             total_execution_time_ms += (end_time - start_time) * 1000
             total_compressed_size += len(compressed_payload)
-            
+
             # Verify fidelity immediately via decompression
             decompressed_payload = decompressor.payload_decompression(compressed_payload)
             if decompressed_payload != payload:

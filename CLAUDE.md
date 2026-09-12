@@ -8,8 +8,11 @@ A peer-to-peer chat application (course project for "Software Design and Develop
 
 ## Commands
 
+- Install/sync dependencies: `uv sync`
+- Run the full test suite: `uv run pytest`
 - Run a single test file: `uv run pytest tests/test_compression.py -v`
 - Run a single test: `uv run pytest tests/test_server.py::TestConfig::test_server_socket_config -v`
+- Lint: `uv run ruff check .`
 - CLI entry point: `py p2ppred.py` → dispatches to the `p2ppred` argparse CLI built in `src/cli/commands.py`
   - `py p2ppred.py validate <config.json>` — validate a config file
   - `py p2ppred.py compress "text"` — compress text, prints hex (or `-o file` to write raw bytes)
@@ -41,7 +44,7 @@ On top of raw TCP sits a small length-prefixed message protocol (loosely SMTP-st
 
 `src/business/compression/compression.py` (`Compression.payload_compression`) and `decompression.py` (`Decompression.payload_decompression`) are the compression/decompression counterparts and must stay in lock-step on wire format:
 - Strings of length ≤ `k` (2) are passed through as plain ASCII bytes (no framing).
-- Longer strings: a 65536-entry `guess_table` keyed by a hash of the preceding `k`-character substring predicts the next character; a `bitarray` records hit(1)/miss(0) per position. Mispredicted ("leftover") characters are stored verbatim. Wire format is `[leftovers_count: 2 bytes big-endian][leftover ASCII bytes][packed bit array bytes]`. `guess_table` is instance state (built once in `__init__`), not reset per call — it persists and keeps improving across every message compressed/decompressed by the same `Compression`/`Decompression` instance, i.e. for the whole life of a chat session (`SendMessageProcessor`/`ReceiveMessageProcessor` each own one instance per `Node`). `benchmark.py` creates a fresh pair per corpus file so per-file metrics aren't skewed by predictions learned from unrelated files.
+- Longer strings: a 65536-entry `guess_table` keyed by a hash of the preceding `k`-character substring predicts the next character; a `bitarray` records hit(1)/miss(0) per position. Mispredicted ("leftover") characters are stored verbatim. Wire format is `[leftovers_count: 2 bytes big-endian][leftover ASCII bytes][packed bit array bytes]`. `guess_table` is instance state (built once in `__init__`), not reset per call — it persists and keeps improving across every message compressed/decompressed by the same `Compression`/`Decompression` instance, i.e. for the whole life of a chat session (`SendMessageProcessor`/`ReceiveMessageProcessor` each own one instance per `Node`). `benchmark.py` creates a fresh `Compression`/`Decompression` pair per *speaker* within each corpus file (not one pair for the whole file) so per-file metrics aren't skewed by predictions learned from unrelated files, and so one speaker's guess table isn't cross-pollinated by another speaker's text — mirroring the real deployment, where a speaker's outgoing messages are compressed by their own Node's `Compression` and decompressed by the peer Node's `Decompression`, and the two directions of a conversation (A→B, B→A) never share a table.
 - `SendMessageProcessor`/`ReceiveMessageProcessor` (`src/business/messages/`) are thin wrappers gluing `Compression`/`Decompression` into the client/server message pipeline; `CLIMessageSource`/`CLIMessageOutput` are the CLI-facing input/output adapters.
 - There is no length field: the decoder walks `len(flag_bits)` (a multiple of 8, so it includes the bit array's trailing zero padding) and stops via the `leftovers_index >= len(leftovers)` break. Termination depends on leftovers exhausting exactly when the real payload ends — any change to how leftovers or padding are written must preserve that.
 - **Input must be codepoints < 256.** Leftovers are written with `result.extend(ord(c) for c in leftovers)`, so any character above U+00FF raises `ValueError: byte must be in range(0, 256)`; the `len(S) <= k` fast path is stricter still (`encoding="ASCII"`).
