@@ -7,13 +7,13 @@ prints each process's full output + exit code.
 
 Usage:  uv run python .claude/skills/run-predictorcompression/drive_start.py
 
-KNOWN BROKEN (see SKILL.md Gotchas): as of this writing, the side that sends
-the first real chat message crashes with
-    TypeError: a bytes-like object is required, not 'str'
-in ClientManager.run() (src/network/client.py) — it sends the raw string
-instead of the SendMessageProcessor's compressed bytes. This script still
-exits 0 as a *driver* (it ran the app and captured the crash); read the
-printed output to see whether the crash is still present.
+Expect both nodes to exit 0: node A's output should show the peer's chat
+message displayed (compression/decompression round-tripped over the wire),
+and node B's "quit" should cause node A to print "Peer has left the chat."
+and terminate too, even though A's own stdin was never touched. If a
+traceback appears instead, something regressed in the send/handshake path
+— see SKILL.md Gotchas for the last-known-good behavior this was checked
+against.
 """
 
 import json

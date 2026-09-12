@@ -46,10 +46,11 @@ to both and prints full output + exit codes for each:
 uv run python .claude/skills/run-predictorcompression/drive_start.py
 ```
 
-**As of this writing this currently demonstrates a crash, not a success —
-see Gotchas.** Use it to check whether that crash is still present after
-touching `src/network/client.py`, `src/network/node.py`, or
-`src/business/messages/send_message.py`.
+Expect both nodes to exit 0, with node A's output showing the peer's chat
+message displayed and, after `quit`, `Peer has left the chat.` — see
+Gotchas for the last-known-good behavior this was verified against. Rerun
+this after touching `src/network/client.py`, `src/network/node.py`, or
+`src/business/messages/send_message.py` to make sure it still holds.
 
 ## Direct invocation
 
@@ -88,13 +89,11 @@ peer's port, not this node's own port).
 uv run pytest
 ```
 
-As of this writing this collects 3 pre-existing failures in
-`demo/test_additional_coverage.py` (`TestNodeInit`, `TestNodeStartChat`,
-`TestClientSocketRetryBug`) — unrelated to anything in this skill, already
-failing on a clean checkout. One of them,
-`test_real_send_crashes_with_type_error`, independently confirms the
-`start`-command bug documented below. Don't treat these as a regression you
-introduced; only new failures under `tests/` are relevant to a change.
+As of this writing this passes cleanly: 61 passed, 1 skipped (a
+`@pytest.mark.skip(reason="TODO")` in `tests/test_server.py`). There is no
+`demo/` directory in the current checkout — an earlier version of this
+skill referenced pre-existing failures there; that's stale, ignore it. Any
+failure under `tests/` today is a real regression worth investigating.
 
 ## Gotchas
 
@@ -106,17 +105,6 @@ introduced; only new failures under `tests/` are relevant to a change.
   i.e. a perfectly valid config gets reported as invalid, and a successful
   compression as failed. **Fix: always set `PYTHONIOENCODING=utf-8`** before
   invoking `main.py` (both driver scripts here do this already).
-- **`start` crashes on the first real chat message, 100% reproducible.**
-  `ClientManager.run()` (`src/network/client.py:101-102`) calls
-  `self._message_proc.prepare_to_send(msg)` — which returns the compressed
-  bytes — and **discards the return value**, then calls
-  `sock.send_message(msg)` with the original *uncompressed string*.
-  `ClientSocket.send_message` calls `self.sendall(msg)`, and `sendall` on a
-  raw `str` raises `TypeError: a bytes-like object is required, not 'str'`.
-  This is unhandled anywhere above it (`Node.start_chat`, `cmd_start`, and
-  `main()` don't catch `TypeError`), so it's a full crash with traceback,
-  confirmed via `drive_start.py`. The fix is one line: capture and send the
-  processor's return value instead of `msg`.
 - **Connecting both sides is a race, not a rendezvous.** `Node.start_chat()`
   starts the server in a background thread and immediately runs the client
   on the calling thread with no barrier — if the peer's server hasn't
@@ -124,12 +112,20 @@ introduced; only new failures under `tests/` are relevant to a change.
   or may not catch up depending on config `retries`/`timeout`. Give it a
   few seconds (`drive_start.py` sleeps 5s) before trusting a "not
   connected" result.
-- **`quit` only stops your own node, not the peer.** Typing `quit` triggers
-  this node's own shared `Connection.update_state()`, which only notifies
-  *this process's own* server/client `Observer`s (the `Connection` object
-  is per-node, not shared across the two OS processes). The peer keeps
-  running until its own server's accept-retry window lapses or you quit it
-  too.
+- **`quit` does reach the peer.** Typing `quit` sends a `MessageType.QUIT`
+  frame to the peer and updates this node's own `Connection` state.
+  `ServerManager.run()` on the *receiving* side (`src/network/server.py:
+  190-192`) handles that frame by printing `Peer has left the chat.` and
+  calling its own `Connection.update_state()`, which (via the
+  `Observer`/`Observable` wiring in `Node.__init__`) notifies that peer's
+  own `ServerManager` *and* `ClientManager`. Verified live with a probe
+  script: node A exited cleanly (code 0, printed `Peer has left the
+  chat.`) after node B sent `quit`, without A's own stdin ever being
+  touched. Note the peer's `ClientManager` loop is otherwise blocked in a
+  plain `input()` call with no timeout (`message_source.py`), so if you
+  see a peer *not* exiting promptly after a `quit`, that blocking read is
+  the first place to look — but in practice it has not reproduced as a
+  hang.
 
 ## Troubleshooting
 
@@ -137,4 +133,3 @@ introduced; only new failures under `tests/` are relevant to a change.
 |---|---|---|
 | `✗ Config is invalid: 'charmap' codec can't encode character '✓'...` on a valid config | Windows console isn't UTF-8 | `PYTHONIOENCODING=utf-8 uv run python main.py validate ...` |
 | `git bash` / MSYS path like `-o /tmp/out.bin` resolves to `C:/Program Files/Git/tmp/out.bin` and fails with `PermissionError` | MSYS path translation rewrites leading `/tmp` | Use a `C:/...` path (or a path under the scratch dir) for `-o`, not a bare `/tmp/...` path |
-| `start` crashes with `TypeError: a bytes-like object is required, not 'str'` | The send-path bug above | Known issue; not yet fixed. Not something to route around when *driving* the app — it's the accurate current behavior |

@@ -97,11 +97,6 @@ py main.py start nodeA_server.json nodeA_client.json   # nodeA_server.json: {"po
 py main.py start nodeB_server.json nodeB_client.json   # nodeB_server.json: {"port": 6000}, nodeB_client.json: {"port": 5000}
 ```
 
-### Known issues
-
-- Sending a chat message via `start` currently crashes: `ClientManager.run()` discards the compressed payload and sends the raw string instead, which fails at the socket layer.
-- Typing `quit` only stops your own node's session — it doesn't notify the peer, which keeps running until its own accept/connect retry window lapses.
-
 ## Testing and benchmarking
 
 ```bash
