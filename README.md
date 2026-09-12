@@ -88,7 +88,7 @@ Each node needs **two** JSON config files: one for its server socket, one for it
 }
 ```
 
-`address`, `timeout`, and `retries` are optional and default to `127.0.0.1`, `5.0`, and `3` respectively. `port` is required — for the **server** config it's this node's own listening port; for the **client** config it's the *peer's* port (the client config connects out to it). Note that the config loader only ever reads a `port` key; there is no separate `peer_port` key.
+`address`, `timeout`, and `retries` are optional and default to `127.0.0.1`, `5.0`, and `3` respectively. `port` is required — for the **server** config it's this node's own listening port; for the **client** config it's the *peer's* port (the client config connects out to it).
 
 To run two local nodes against each other you need four files in total (a server + client config per node), e.g. for node A listening on `5000` and dialing node B's `6000`, and node B listening on `6000` and dialing node A's `5000`:
 
@@ -96,8 +96,6 @@ To run two local nodes against each other you need four files in total (a server
 py main.py start nodeA_server.json nodeA_client.json   # nodeA_server.json: {"port": 5000}, nodeA_client.json: {"port": 6000}
 py main.py start nodeB_server.json nodeB_client.json   # nodeB_server.json: {"port": 6000}, nodeB_client.json: {"port": 5000}
 ```
-
-`node1config.json`/`node2config.json` at the repo root predate this and use a different single-file `port`/`peer_port` shape that the loader doesn't read that way — they are **not** directly usable as the `server_json`/`client_json` arguments above.
 
 ### Known issues
 
