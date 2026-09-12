@@ -46,7 +46,11 @@ The quick brown fox jumps over the lazy dog
 # Terminal 1 — node 1
 $ py main.py start node1config.json node2config.json
 Starting chat...
-Hey, are you there?
+> Hey, can you see this?
+Yep, loud and clear!
+> Great, chat away!
+What's on your mind?
+> quit
 Terminating Process
 ```
 
@@ -54,12 +58,16 @@ Terminating Process
 # Terminal 2 — node 2
 $ py main.py start node2config.json node1config.json
 Starting chat...
-> Hey, are you there?
+Hey, can you see this?
+> Yep, loud and clear!
+Great, chat away!
+> What's on your mind?
+Peer has left the chat.
 > quit
 Terminating Process
 ```
 
-Node 1 displays the message node 2 typed, compressed and sent over the wire; node 2's `quit` then ends the session on both sides.
+Each side's typed lines are compressed and sent over the wire, decompressed, and displayed on the other. Node 1 quits first, so node 2 sees `Peer has left the chat.` before quitting itself — node 1 doesn't get that message about its own departure.
 
 ## Features
 
